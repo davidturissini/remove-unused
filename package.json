@@ -1,0 +1,12 @@
+{
+  "name": "remove-unused-monorepo",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "nx": "20.3.0",
+    "typescript": "5.7.2"
+  },
+  "volta": {
+    "node": "22.12.0"
+  }
+}
