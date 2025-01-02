@@ -1,1 +1,9 @@
-export function main() {}
+type Params = {
+  cwd: string;
+}
+
+export async function analyze({ cwd }: Params) {
+  return {
+    unusedFiles: [],
+  }
+}

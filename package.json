@@ -4,7 +4,11 @@
   "private": true,
   "dependencies": {
     "nx": "20.3.0",
+    "@nx/devkit": "20.3.0",
     "typescript": "5.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.4"
   },
   "volta": {
     "node": "22.12.0"
