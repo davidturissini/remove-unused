@@ -1,6 +1,7 @@
 import mock from 'mock-fs';
 import { describe, expect, it } from 'vitest';
 import { parseFile, analyze } from './analyze.js';
+import { readFileSync } from 'fs';
 
 describe('analyze', () => {
   describe('unused ts file', () => {
@@ -22,6 +23,26 @@ describe('analyze', () => {
       expect(unusedFiles).toEqual([
         '/test/src/unused.ts'
       ]);
+    });
+
+    describe('unused ts file in node_modules', () => {
+      it('should not report as unused', async () => {
+        mock({
+          '/test/node_modules/package/foo.ts': '// in node modules',
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {}
+          })
+        });
+  
+        const { unusedFiles } = await analyze({
+          cwd: '/test'
+        });
+  
+        expect(unusedFiles).toEqual([]);
+      });
     });
   });
 
@@ -185,6 +206,73 @@ describe('analyze', () => {
       });
 
       expect(unusedFiles).toEqual([]);
+    });
+  });
+
+  describe('packageJson scripts', () => {
+    it('should not mark node script files as unused', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "main": "src/main.ts",
+          "version": "0.0.1",
+          "private": true,
+          "dependencies": {},
+          "scripts": {
+            "used": "node ./scripts/used.js"
+          },
+        }),
+        '/test/scripts/used.js': '// used by jest'
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test'
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+  });
+
+  describe('Next', () => {
+    describe('non-root dir', () => {
+      it('should not mark node script files as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.ts",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {},
+            "devDependencies": {
+              "next": "1.2.2"
+            },
+            "scripts": {
+              "dev": "next dev demo"
+            },
+          }),
+          '/test/demo/next.config.js': '// used by next',
+          '/test/demo/tailwind.config.js': '// used by postcss',
+          '/test/demo/postcss.config.js': `
+            module.exports = {
+              plugins: {
+                tailwindcss: { config: '/test/demo/tailwind.config.js' },
+                autoprefixer: {},
+              },
+            }
+          `,
+          '/test/demo/pages/theme.js': '// used by next'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          require(path: string) {
+            const contents = readFileSync(path).toString();
+            return eval(contents);
+          }
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
     });
   });
 });

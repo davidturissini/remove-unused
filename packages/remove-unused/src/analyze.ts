@@ -4,28 +4,32 @@ import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, E
 import { z } from 'zod';
 import { globSync } from 'glob';
 import { plugin as jestPlugin } from './plugins/jest.js';
+import { plugin as packageJsonScriptsPlugin } from './plugins/node-scripts.js';
+import { plugin as nextPlugin } from './plugins/next.js';
 
 type Params = {
   cwd: string;
+  require?: (path: string) => unknown;
 }
-
 
 const packageJsonSchema = z.object({
   main: z.string().optional(),
   types: z.string().optional(),
   devDependencies: z.record(z.string(), z.string()).optional(),
   dependencies: z.record(z.string(), z.string()).optional(),
+  scripts: z.record(z.string(), z.string()).optional(),
 }).passthrough();
 
 export type PackageJsonSchema = z.infer<typeof packageJsonSchema>;
 
 export type State = {
+  require(path: string): unknown;
   isReferenced(path: string): boolean;
   addRef(path: string): void;
   isLibraryFile(path: string): boolean;
 }
 
-export type Library = {
+export type Plugin = {
   name: string;
   fileBelongsTo(path: string): boolean;
 }
@@ -34,7 +38,7 @@ type PackageDefinition = {
   packageJson: PackageJsonSchema;
   entryPoints: Record<string, true>;
   files: Record<string, string>;
-  libraries: Library[];
+  plugins: Plugin[];
 }
 
 const PACKAGE_JSON = 'package.json';
@@ -64,27 +68,32 @@ function getPackageEntryPoints(cwd: string, packageJson: PackageJsonSchema) {
   return entryPoints;
 }
 
-const plugins = [
+const pluginsRegistry = [
   jestPlugin,
+  packageJsonScriptsPlugin,
+  nextPlugin,
 ] as const;
 
 async function parsePackage({ cwd, state }: { cwd: string, state: State }): Promise<PackageDefinition> {
   const packageJson = readPackageJson({ cwd });
-  const libraries: Library[] = [];
+  const plugins: Plugin[] = [];
   const typescriptFiles = globSync(
-    pathJoin(cwd, '**/*.{js,ts}')
+    pathJoin(cwd, '**/*.{js,ts}'),
+    {
+      ignore: ['**/node_modules/**']
+    }
   );
 
-  for(const createPlugin of plugins) {
+  for(const createPlugin of pluginsRegistry) {
     const plugin = await createPlugin({ cwd, packageJson, state });
     if (plugin === undefined) {
       continue;
     }
-    libraries.push(plugin);
+    plugins.push(plugin);
   }
 
   return {
-    libraries,
+    plugins,
     packageJson,
     entryPoints: getPackageEntryPoints(cwd, packageJson),
     files: typescriptFiles.reduce((acc, filePath) => {
@@ -177,15 +186,16 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
 }
 
 
-export async function analyze({ cwd }: Params) {
+export async function analyze({ cwd, require: requireParam = require }: Params) {
   const usedFiles: Record<string, true> = {};
   const state: State = {
+    require: requireParam,
     isReferenced(path) {
       return usedFiles[path] === true;
     },
     isLibraryFile(path) {
-      for (const library of libraries) {
-        if (library.fileBelongsTo(path) === true) {
+      for (const plugin of plugins) {
+        if (plugin.fileBelongsTo(path) === true) {
           return true;
         }
       }
@@ -198,7 +208,7 @@ export async function analyze({ cwd }: Params) {
 
   const packageDef = await parsePackage({ cwd, state });
   const {
-    libraries,
+    plugins,
     files: sourceFiles,
     entryPoints: packageEntrypoints,
   } = packageDef;

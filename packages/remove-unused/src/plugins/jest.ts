@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Library, PackageJsonSchema, State } from '../analyze.js';
+import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
 
 const jestConfigSchema = z.object({
   setupFilesAfterEnv: z.array(
@@ -20,7 +20,7 @@ async function loadConfig({ packageJson }: { packageJson: unknown }) {
   return parsed.data.jest;
 }
 
-async function jest({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: unknown }): Promise<Library> {
+async function jest({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: unknown }): Promise<Plugin> {
   const config = await loadConfig({ packageJson });
   const fileMatch = new RegExp('.test.js');
   config?.setupFilesAfterEnv?.forEach((path) => {
