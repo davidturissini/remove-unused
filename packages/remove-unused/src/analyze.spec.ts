@@ -36,11 +36,11 @@ describe('analyze', () => {
             "dependencies": {}
           })
         });
-  
+
         const { unusedFiles } = await analyze({
           cwd: '/test'
         });
-  
+
         expect(unusedFiles).toEqual([]);
       });
     });
@@ -302,7 +302,7 @@ describe('analyze', () => {
       });
 
       describe('root dir', () => {
-        it('should not mark node script files as unused', async () => {
+        it.each(['next.config.js', 'next.config.mjs'])('should not mark %s as unused', async (configFileName) => {
           mock({
             '/test/package.json': JSON.stringify({
               "name": "unused-typescript-file",
@@ -317,7 +317,84 @@ describe('analyze', () => {
                 "dev": "next dev"
               },
             }),
-            '/test/next.config.js': '// used by next'
+            [`/test/${configFileName}`]: '// used by next'
+          });
+
+          const { unusedFiles } = await analyze({
+            cwd: '/test',
+            require(path: string) {
+              const contents = readFileSync(path).toString();
+              return eval(contents);
+            }
+          });
+
+          expect(unusedFiles).toEqual([]);
+        });
+      });
+
+      describe('MDX', () => {
+        it('should not mark MDX files in pages dir as unused', async () => {
+          mock({
+            '/test/package.json': JSON.stringify({
+              "name": "unused-typescript-file",
+              "main": "src/main.ts",
+              "version": "0.0.1",
+              "private": true,
+              "dependencies": {},
+              "devDependencies": {
+                "next": "1.2.2"
+              },
+              "scripts": {
+                "dev": "next dev"
+              },
+            }),
+            '/test/next.config.js': '// used by next',
+            '/test/src/pages/Foo.mdx': '// presumably used by next?'
+          });
+
+          const { unusedFiles } = await analyze({
+            cwd: '/test',
+            require(path: string) {
+              const contents = readFileSync(path).toString();
+              return eval(contents);
+            }
+          });
+
+          expect(unusedFiles).toEqual([]);
+        });
+
+        it('should not mark component imported in MDX file as unused', async () => {
+          mock({
+            '/test/package.json': JSON.stringify({
+              "name": "unused-typescript-file",
+              "main": "src/main.ts",
+              "version": "0.0.1",
+              "private": true,
+              "dependencies": {},
+              "devDependencies": {
+                "next": "1.2.2"
+              },
+              "scripts": {
+                "dev": "next dev"
+              },
+            }),
+            '/test/jsconfig.json': `
+              {
+                "compilerOptions": {
+                  "baseUrl": ".",
+                  "paths": {
+                    "@/*": ["src/*"]
+                  }
+                }
+              }
+            `,
+            '/test/next.config.js': '// used by next',
+            '/test/src/components/Foo.js': '// used by mdx',
+            '/test/src/pages/Foo.mdx': `
+import Foo from '@/components/Foo'
+
+<Foo />
+            `
           });
 
           const { unusedFiles } = await analyze({
@@ -411,11 +488,11 @@ describe('analyze', () => {
               }
             `
           });
-    
+
           const { unusedFiles } = await analyze({
             cwd: '/test'
           });
-    
+
           expect(unusedFiles).toEqual([]);
         });
 
@@ -447,11 +524,11 @@ describe('analyze', () => {
               }
             `
           });
-    
+
           const { unusedFiles } = await analyze({
             cwd: '/test'
           });
-    
+
           expect(unusedFiles).toEqual([]);
         });
 
@@ -484,43 +561,47 @@ describe('analyze', () => {
               }
             `
           });
-    
+
           const { unusedFiles } = await analyze({
             cwd: '/test'
           });
-    
+
           expect(unusedFiles).toEqual([]);
         });
       });
     });
   });
-
-  
-
 });
 
 describe('parseFile', () => {
   it('should support typescript', () => {
     expect(() => {
-      parseFile('foo.ts', `
+      parseFile('foo.ts', {
+        type: 'ecmascript',
+        source: `
         type Foo = { prop: string };
         const foo: Foo = { prop: 'asd' };  
-      `)
+      `})
     }).not.toThrow();
   });
 
   it('should support decorators', () => {
     expect(() => {
-      parseFile('foo.ts', `
-        @Component({ })
-        class Foo {}
-      `)
+      parseFile('foo.ts', {
+        type: 'ecmascript',
+        source: `
+          @Component({ })
+          class Foo {}
+        `
+      })
     }).not.toThrow();
   });
 
   it('should support decoratorsBeforeExport', () => {
     expect(() => {
-      parseFile('foo.js', `
+      parseFile('foo.js', {
+        type: 'ecmascript',
+        source: `
         import { Component } from '@angular/core'
 
         @Component({
@@ -536,13 +617,15 @@ describe('parseFile', () => {
 
         export class NavComponent {}
 
-      `)
+      `})
     }).not.toThrow();
   });
 
   it('should support TSX', () => {
     expect(() => {
-      parseFile('foo.tsx', `
+      parseFile('foo.tsx', {
+        type: 'ecmascript',
+        source: `
         type Foo = { prop: string };
         const foo: Foo = { prop: 'asd' };  
 
@@ -551,19 +634,37 @@ describe('parseFile', () => {
             <div>Hi</div>
           );
         }
-      `)
+      `})
     }).not.toThrow();
   });
 
   it('should support JSX', () => {
     expect(() => {
-      parseFile('foo.jsx', `
+      parseFile('foo.jsx', {
+        type: 'ecmascript',
+        source: `
         function ok () {
           return (
             <div>Hi</div>
           );
         }
-      `)
+      `})
     }).not.toThrow();
   });
+
+  it('should support MDX', () => {
+    expect(() => {
+      parseFile('foo.mdx', {
+        type: 'mdx',
+        source: `
+          ---
+          title: Front matter
+          ---
+
+          import { Foo } from 'somewhere';
+
+          <div>Some JSX</div>
+      `})
+    }).not.toThrow();
+  })
 });

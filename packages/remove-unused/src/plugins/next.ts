@@ -11,6 +11,12 @@ const postCssConfigSchema = z.object({
   }).optional()
 });
 
+const CONFIG_FILE_NAMES = [
+  'next.config.js',
+  'next.config.mjs'
+]
+
+
 export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }): Promise<Plugin | undefined> {
   const { dependencies, devDependencies } = packageJson;
   if (dependencies?.next === undefined && devDependencies?.next === undefined) {
@@ -37,9 +43,13 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
   const localNextDir = nextJsScript.split(' ')[2] ?? 'src';
 
   const absoluteDir = pathJoin(cwd, localNextDir);
-  const nextJsConfig = hasConfiguredLocalDir === true ? pathJoin(absoluteDir, 'next.config.js') : pathJoin(cwd, 'next.config.js');
+
+  CONFIG_FILE_NAMES.forEach((configFile) => {
+    const nextJsConfig = hasConfiguredLocalDir === true ? pathJoin(absoluteDir, configFile) : pathJoin(cwd, configFile);
+    state.addRef(nextJsConfig);
+  });
+
   const postCssConfigPath = pathJoin(absoluteDir, 'postcss.config.js');
-  state.addRef(nextJsConfig);
 
   if (existsSync(postCssConfigPath) === true) {
     state.addRef(postCssConfigPath);

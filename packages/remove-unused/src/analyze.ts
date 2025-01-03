@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { join as pathJoin, extname, dirname } from 'node:path';
+import { join as pathJoin, extname, dirname, parse } from 'node:path';
 import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration } from '@swc/core';
 import { z } from 'zod';
+import { remark } from 'remark'
+import remarkMdx from 'remark-mdx'
 import { globSync } from 'glob';
 import { plugin as jestPlugin } from './plugins/jest.js';
 import { plugin as packageJsonScriptsPlugin } from './plugins/node-scripts.js';
@@ -43,9 +45,14 @@ export type Plugin = {
   resolver?: PathResolver;
 }
 
+type FileDef = {
+  type: 'ecmascript' | 'mdx';
+  source: string
+}
+
 type PackageDefinition = {
   packageJson: PackageJsonSchema;
-  files: Record<string, string>;
+  files: Record<string, FileDef>;
   plugins: Plugin[];
 }
 
@@ -73,7 +80,14 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
   const packageJson = readPackageJson({ cwd });
   const plugins: Plugin[] = [];
   const typescriptFiles = globSync(
-    pathJoin(cwd, '**/*.{js,ts,jsx,tsx}'),
+    pathJoin(cwd, '**/*.{js,ts,jsx,tsx,mjs,cjs}'),
+    {
+      ignore: ['**/node_modules/**']
+    }
+  );
+
+  const mdxFiles = globSync(
+    pathJoin(cwd, '**/*.mdx'),
     {
       ignore: ['**/node_modules/**']
     }
@@ -87,13 +101,26 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
     plugins.push(plugin);
   }
 
+  const files: PackageDefinition['files'] = {};
+
+  mdxFiles.forEach((filePath) => {
+    files[filePath] = {
+      type: 'mdx',
+      source: readFileSync(filePath).toString()
+    };
+  })
+
+  typescriptFiles.forEach((filePath) => {
+    files[filePath] = {
+      type: 'ecmascript',
+      source: readFileSync(filePath).toString()
+    };
+  })
+
   return {
     plugins,
     packageJson,
-    files: typescriptFiles.reduce((acc, filePath) => {
-      acc[filePath] = readFileSync(filePath).toString();
-      return acc;
-    }, {} as PackageDefinition['files'])
+    files,
   };
 }
 
@@ -139,7 +166,7 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
           const resolved = state.resolvePath(importStatement.source.value);
           if (resolved === undefined) {
             const extension = extname(importStatement.source.value) || '.ts';
-            staticRequireStatements.push(
+            importStatements.push(
               pathJoin(
                 dirname(sourceFilePath),
                 `${importStatement.source.value}${extension}`
@@ -180,15 +207,96 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
   }
 }
 
-export function parseFile(fileName: string, contents: string) {
+type AstDef = ReturnType<typeof parseFile>;
+
+export function parseFile(fileName: string, file: FileDef) {
   const ext = extname(fileName);
-  return parseSync(contents, {
-    syntax: (ext === '.ts' || ext === '.tsx') ? 'typescript' : 'ecmascript',
-    decorators: true,
-    decoratorsBeforeExport: true,
-    tsx: true,
-    jsx: true,
+  switch (file.type) {
+    case 'ecmascript': {
+      return {
+        type: 'ecmascript',
+        ast: parseSync(file.source, {
+          syntax: (ext === '.ts' || ext === '.tsx') ? 'typescript' : 'ecmascript',
+          decorators: true,
+          decoratorsBeforeExport: true,
+          tsx: true,
+          jsx: true,
+        })
+      } as const;
+    }
+    case 'mdx': {
+      return {
+        type: 'mdx',
+        ast: remark()
+          .use(remarkMdx)
+          .parse(file.source)
+      } as const;
+    }
+  }
+
+
+}
+
+function resolveMdxImportStatements(sourceFilePath: string, ast: AstDef, state: State) {
+  if (ast.ast.type !== 'root') {
+    throw new Error('Invalid top level MDX ast');
+  }
+
+  const importStatements: string[] = [];
+  const { children } = ast.ast;
+
+  children.forEach((child) => {
+    if (child.type !== 'mdxjsEsm') {
+      return;
+    }
+
+    const { data } = child;
+
+    if (data === undefined) {
+      return;
+    }
+
+    const { estree } = data;
+
+    estree?.body.forEach((item) => {
+      if (item.type === 'ImportDeclaration') {
+        if (typeof item.source.value !== 'string') {
+          throw new Error(`Import source "${item.source.value}" is not a string`)
+        }
+
+        const { value: importSource } = item.source;
+        const resolved = state.resolvePath(importSource);
+          if (resolved === undefined) {
+            const extension = extname(importSource) || '.ts';
+            importStatements.push(
+              pathJoin(
+                dirname(sourceFilePath),
+                `${importSource}${extension}`
+              )
+            );
+            return;
+          }
+          importStatements.push(resolved);
+      }
+    })
+
   });
+
+  return {
+    static: [],
+    importStatements,
+  }
+}
+
+function collectFileReferences(path: string, ast: AstDef, state: State) {
+  switch (ast.type) {
+    case 'ecmascript': {
+      return resolveRequireStatements(path, ast.ast, state);
+    }
+    case 'mdx': {
+      return resolveMdxImportStatements(path, ast, state);
+    }
+  }
 }
 
 async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files'>, state: State) {
@@ -200,15 +308,11 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
 
     try {
       const ast = parseFile(path, packageFiles[path]);
-      const { importStatements, static: staticRequireExpressions } = resolveRequireStatements(path, ast, state);
-      
-      
+      const { importStatements, static: staticRequireExpressions } = collectFileReferences(path, ast, state);
+
+
       [...importStatements, ...staticRequireExpressions].forEach((path) => state.addRef(path));
-    } catch (e) {
-      if (/pages\/blog\/index/.test(path)) {
-        console.log('importStatements', e)
-      }
-     }
+    } catch { }
   });
 }
 
@@ -218,7 +322,7 @@ export async function analyze({ cwd, require: requireParam = require }: Params) 
   const resolvers: PathResolver[] = [];
   const state: State = {
     resolvePath: (path: string) => {
-      for(const plugin of plugins) {
+      for (const plugin of plugins) {
         const resolved = plugin?.resolver?.(path);
         if (resolved !== undefined) {
           return resolved;
@@ -244,7 +348,7 @@ export async function analyze({ cwd, require: requireParam = require }: Params) 
       usedFiles[path] = true;
     },
   }
-  
+
   const packageDef = await parsePackage({ cwd, state });
   const {
     plugins,
