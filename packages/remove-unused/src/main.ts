@@ -1,9 +1,1 @@
-type Params = {
-  cwd: string;
-}
-
-export async function analyze({ cwd }: Params) {
-  return {
-    unusedFiles: [],
-  }
-}
+export { analyze } from './analyze.js';
