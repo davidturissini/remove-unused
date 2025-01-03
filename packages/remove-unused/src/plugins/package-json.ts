@@ -19,11 +19,12 @@ function getPackageEntryPoints(cwd: string, packageJson: PackageJsonSchema) {
   return entryPoints;
 }
 
-
 export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }): Promise<Plugin | undefined> {
   const entryPoints = getPackageEntryPoints(cwd, packageJson);
 
   Object.keys(entryPoints).forEach((key) => {
     state.addRef(key);
   });
+
+  return undefined;
 }

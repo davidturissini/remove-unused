@@ -17,6 +17,11 @@ const jsConfigSchema = z.object({
   ])
 });
 
+const EXTENSIONS = [
+  '.jsx',
+  '.js'
+]
+
 export async function plugin({ cwd, state }: { cwd: string, state: State }): Promise<Plugin | undefined> {
   const jsConfigFilePath = pathJoin(cwd, 'jsconfig.json');
   if (existsSync(jsConfigFilePath) === false) {
@@ -36,12 +41,16 @@ export async function plugin({ cwd, state }: { cwd: string, state: State }): Pro
   return {
     name: 'jsconfig',
     resolver: (importPath) => {
-      const resolved = matchPathFn(importPath, undefined, undefined, [
-        '.jsx',
-        '.js'
-      ]);
+      const resolved = matchPathFn(importPath, undefined, undefined, EXTENSIONS);
+
+      for(const ext of EXTENSIONS) {
+        const path = `${resolved}${ext}`;
+        if (existsSync(path) === true) {
+          return path;
+        }
+      }
   
-      return `${resolved}.jsx`;
+      return undefined;
     }
   }
 }

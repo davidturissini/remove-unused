@@ -40,7 +40,7 @@ export type State = {
 export type Plugin = {
   name: string;
   fileBelongsTo?(path: string): boolean;
-  resolver?(importPath: string): string;
+  resolver?: PathResolver;
 }
 
 type PackageDefinition = {
@@ -138,7 +138,14 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
         if (importStatement.source.type === 'StringLiteral') {
           const resolved = state.resolvePath(importStatement.source.value);
           if (resolved === undefined) {
-            throw new Error(`Unable to resolve path: ${importStatement.source.value}`);
+            const extension = extname(importStatement.source.value) || '.ts';
+            staticRequireStatements.push(
+              pathJoin(
+                dirname(sourceFilePath),
+                `${importStatement.source.value}${extension}`
+              )
+            );
+            return;
           }
           importStatements.push(resolved);
         }
@@ -194,8 +201,14 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
     try {
       const ast = parseFile(path, packageFiles[path]);
       const { importStatements, static: staticRequireExpressions } = resolveRequireStatements(path, ast, state);
+      
+      
       [...importStatements, ...staticRequireExpressions].forEach((path) => state.addRef(path));
-    } catch { }
+    } catch (e) {
+      if (/pages\/blog\/index/.test(path)) {
+        console.log('importStatements', e)
+      }
+     }
   });
 }
 
