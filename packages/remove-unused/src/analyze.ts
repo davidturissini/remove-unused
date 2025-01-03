@@ -58,7 +58,6 @@ type PackageDefinition = {
 
 const PACKAGE_JSON = 'package.json';
 
-
 function readPackageJson({ cwd }: Pick<Params, 'cwd'>) {
   const contents = readFileSync(
     pathJoin(cwd, PACKAGE_JSON)

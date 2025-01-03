@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { parseFile, analyze } from './analyze.js';
 import { readFileSync } from 'fs';
 
+function mockRequire(path: string) {
+  const contents = readFileSync(path).toString();
+  return eval(contents);
+}
+
 describe('analyze', () => {
   describe('unused ts file', () => {
     it('should report unused file', async () => {
@@ -276,7 +281,7 @@ describe('analyze', () => {
                 "dev": "next dev demo"
               },
             }),
-            '/test/demo/next.config.js': '// used by next',
+            '/test/demo/next.config.js': 'module.exports = {}',
             '/test/demo/tailwind.config.js': '// used by postcss',
             '/test/demo/postcss.config.js': `
               module.exports = {
@@ -348,7 +353,11 @@ describe('analyze', () => {
                 "dev": "next dev"
               },
             }),
-            '/test/next.config.js': '// used by next',
+            '/test/next.config.js': `
+              module.exports = {
+                pageExtensions: ['mdx'],
+              }
+            `,
             '/test/src/pages/Foo.mdx': '// presumably used by next?'
           });
 
@@ -361,6 +370,40 @@ describe('analyze', () => {
           });
 
           expect(unusedFiles).toEqual([]);
+        });
+
+        it('should mark files in pages dir as unused when pageExtensions does not contain mdx', async () => {
+          mock({
+            '/test/package.json': JSON.stringify({
+              "name": "unused-typescript-file",
+              "main": "src/main.ts",
+              "version": "0.0.1",
+              "private": true,
+              "dependencies": {},
+              "devDependencies": {
+                "next": "1.2.2"
+              },
+              "scripts": {
+                "dev": "next dev"
+              },
+            }),
+            '/test/next.config.js': `
+              module.exports = {}
+            `,
+            '/test/src/pages/Foo.mdx': '// presumably used by next?'
+          });
+
+          const { unusedFiles } = await analyze({
+            cwd: '/test',
+            require(path: string) {
+              const contents = readFileSync(path).toString();
+              return eval(contents);
+            }
+          });
+
+          expect(unusedFiles).toEqual([
+            '/test/src/pages/Foo.mdx'
+          ]);
         });
 
         it('should not mark component imported in MDX file as unused', async () => {
@@ -388,7 +431,11 @@ describe('analyze', () => {
                 }
               }
             `,
-            '/test/next.config.js': '// used by next',
+            '/test/next.config.js': `
+              module.exports = {
+                pageExtensions: ['mdx']
+              };
+            `,
             '/test/src/components/Foo.js': '// used by mdx',
             '/test/src/pages/Foo.mdx': `
 import Foo from '@/components/Foo'
@@ -399,10 +446,7 @@ import Foo from '@/components/Foo'
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require(path: string) {
-              const contents = readFileSync(path).toString();
-              return eval(contents);
-            }
+            require: mockRequire,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -477,6 +521,9 @@ import Foo from '@/components/Foo'
               import Foo from '@/components/Foo';
             `,
             '/test/src/components/Foo.jsx': '// referenced via alias',
+            '/test/next.config.js': `
+              module.exports = {};
+            `,
             '/test/jsconfig.json': `
               {
                 "compilerOptions": {
@@ -490,7 +537,8 @@ import Foo from '@/components/Foo'
           });
 
           const { unusedFiles } = await analyze({
-            cwd: '/test'
+            cwd: '/test',
+            require: mockRequire,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -509,6 +557,9 @@ import Foo from '@/components/Foo'
               },
               "private": true
             }),
+            '/test/next.config.js': `
+              module.exports = {}
+            `,
             '/test/src/pages/index.js': `
               import Foo from '@/components/Foo';
             `,
@@ -526,7 +577,8 @@ import Foo from '@/components/Foo'
           });
 
           const { unusedFiles } = await analyze({
-            cwd: '/test'
+            cwd: '/test',
+            require: mockRequire,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -550,6 +602,9 @@ import Foo from '@/components/Foo'
               import Foo from '@/components/Foo';
             `,
             '/test/src/components/Foo.jsx': '// referenced via alias',
+            '/test/next.config.js': `
+              module.exports = {};
+            `,
             '/test/jsconfig.json': `
               {
                 "compilerOptions": {
@@ -563,7 +618,8 @@ import Foo from '@/components/Foo'
           });
 
           const { unusedFiles } = await analyze({
-            cwd: '/test'
+            cwd: '/test',
+            require: mockRequire,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -657,13 +713,13 @@ describe('parseFile', () => {
       parseFile('foo.mdx', {
         type: 'mdx',
         source: `
-          ---
-          title: Front matter
-          ---
+---
+title: Front matter
+---
 
-          import { Foo } from 'somewhere';
+import { Foo } from 'somewhere';
 
-          <div>Some JSX</div>
+<div>Some JSX</div>
       `})
     }).not.toThrow();
   })

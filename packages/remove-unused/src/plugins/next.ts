@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join as pathJoin } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join as pathJoin, extname } from 'node:path';
 import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
 import { z } from 'zod';
 
@@ -11,11 +11,32 @@ const postCssConfigSchema = z.object({
   }).optional()
 });
 
+const nextJsConfigSchema = z.object({
+  pageExtensions: z.array(z.string()).default(['jsx', 'js', 'tsx', 'ts'])
+});
+
 const CONFIG_FILE_NAMES = [
   'next.config.js',
   'next.config.mjs'
 ]
 
+async function loadConfig(cwd: string, state: State) {
+  for(const fileName of CONFIG_FILE_NAMES) {
+    const absPath = pathJoin(cwd, fileName);
+    if (existsSync(absPath)) {
+      state.addRef(absPath);
+      const contents = state.require(absPath);
+      const parsed = nextJsConfigSchema.safeParse(contents);
+      if (parsed.success === false) {
+        continue;
+      }
+      return {
+        fileName: absPath, 
+        config: parsed.data,
+      }
+    }
+  }
+}
 
 export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }): Promise<Plugin | undefined> {
   const { dependencies, devDependencies } = packageJson;
@@ -43,11 +64,10 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
   const localNextDir = nextJsScript.split(' ')[2] ?? 'src';
 
   const absoluteDir = pathJoin(cwd, localNextDir);
-
-  CONFIG_FILE_NAMES.forEach((configFile) => {
-    const nextJsConfig = hasConfiguredLocalDir === true ? pathJoin(absoluteDir, configFile) : pathJoin(cwd, configFile);
-    state.addRef(nextJsConfig);
-  });
+  const config = await loadConfig(hasConfiguredLocalDir === true ? absoluteDir : cwd, state);
+  if (config) {
+    state.addRef(config.fileName);
+  }
 
   const postCssConfigPath = pathJoin(absoluteDir, 'postcss.config.js');
 
@@ -63,9 +83,16 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
   return {
     name: 'next',
     fileBelongsTo(path) {
-      return path.startsWith(
+      const inPagesDir = path.startsWith(
         pathJoin(absoluteDir, 'pages')
-      )
+      );
+
+      if (inPagesDir === false) {
+        return false;
+      }
+
+      const extension = extname(path).replace('.', '');
+      return config?.config.pageExtensions.includes(extension) === true;
     }
   }
 
