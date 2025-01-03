@@ -1,11 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { join as pathJoin, extname, dirname } from 'node:path';
-import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, Expression } from '@swc/core';
+import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration } from '@swc/core';
 import { z } from 'zod';
 import { globSync } from 'glob';
 import { plugin as jestPlugin } from './plugins/jest.js';
 import { plugin as packageJsonScriptsPlugin } from './plugins/node-scripts.js';
 import { plugin as nextPlugin } from './plugins/next.js';
+import { plugin as prettierPlugin } from './plugins/prettier.js';
+import { plugin as tailwindPlugin } from './plugins/tailwind.js';
+import { plugin as jsConfigPlugin } from './plugins/jsconfig.js';
+import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 
 type Params = {
   cwd: string;
@@ -22,7 +26,11 @@ const packageJsonSchema = z.object({
 
 export type PackageJsonSchema = z.infer<typeof packageJsonSchema>;
 
+type PathResolver = (aliasOrPath: string) => (string | undefined);
+
 export type State = {
+  resolvePath(path: string): (string | undefined);
+  addResolver(resolver: PathResolver): void;
   require(path: string): unknown;
   isReferenced(path: string): boolean;
   addRef(path: string): void;
@@ -31,12 +39,12 @@ export type State = {
 
 export type Plugin = {
   name: string;
-  fileBelongsTo(path: string): boolean;
+  fileBelongsTo?(path: string): boolean;
+  resolver?(importPath: string): string;
 }
 
 type PackageDefinition = {
   packageJson: PackageJsonSchema;
-  entryPoints: Record<string, true>;
   files: Record<string, string>;
   plugins: Plugin[];
 }
@@ -51,40 +59,27 @@ function readPackageJson({ cwd }: Pick<Params, 'cwd'>) {
   return packageJsonSchema.parse(JSON.parse(contents));
 }
 
-function getPackageEntryPoints(cwd: string, packageJson: PackageJsonSchema) {
-  const { main, types } = packageJson;
-  const entryPoints: Record<string, true> = {};
-
-  [
-    main, types
-  ].forEach((filePath) => {
-    if (filePath !== undefined) {
-      entryPoints[
-        pathJoin(cwd, filePath)
-      ] = true;
-    }
-  });
-  
-  return entryPoints;
-}
-
 const pluginsRegistry = [
   jestPlugin,
   packageJsonScriptsPlugin,
   nextPlugin,
+  tailwindPlugin,
+  prettierPlugin,
+  jsConfigPlugin,
+  packageJsonPlugin,
 ] as const;
 
 async function parsePackage({ cwd, state }: { cwd: string, state: State }): Promise<PackageDefinition> {
   const packageJson = readPackageJson({ cwd });
   const plugins: Plugin[] = [];
   const typescriptFiles = globSync(
-    pathJoin(cwd, '**/*.{js,ts}'),
+    pathJoin(cwd, '**/*.{js,ts,jsx,tsx}'),
     {
       ignore: ['**/node_modules/**']
     }
   );
 
-  for(const createPlugin of pluginsRegistry) {
+  for (const createPlugin of pluginsRegistry) {
     const plugin = await createPlugin({ cwd, packageJson, state });
     if (plugin === undefined) {
       continue;
@@ -95,7 +90,6 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
   return {
     plugins,
     packageJson,
-    entryPoints: getPackageEntryPoints(cwd, packageJson),
     files: typescriptFiles.reduce((acc, filePath) => {
       acc[filePath] = readFileSync(filePath).toString();
       return acc;
@@ -105,12 +99,17 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
 
 function walk(exp: ModuleItem | Expression, visitor: {
   require: (exp: CallExpression) => void;
+  importStatement: (exp: ImportDeclaration) => void;
 }) {
-  switch(exp.type) {
+  switch (exp.type) {
+    case 'ImportDeclaration': {
+      visitor.importStatement(exp);
+      break;
+    }
     case 'VariableDeclaration': {
       const { declarations } = exp;
       declarations.forEach((decl) => {
-        const { init } =decl;
+        const { init } = decl;
         if (init !== undefined) {
           walk(init, visitor);
         }
@@ -129,11 +128,21 @@ function walk(exp: ModuleItem | Expression, visitor: {
   }
 }
 
-function resolveRequireStatements(sourceFilePath: string, ast: SwcModule) {
+function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state: State) {
   const staticRequireStatements: string[] = [];
+  const importStatements: string[] = [];
 
   ast.body.forEach((body) => {
     walk(body, {
+      importStatement: (importStatement) => {
+        if (importStatement.source.type === 'StringLiteral') {
+          const resolved = state.resolvePath(importStatement.source.value);
+          if (resolved === undefined) {
+            throw new Error(`Unable to resolve path: ${importStatement.source.value}`);
+          }
+          importStatements.push(resolved);
+        }
+      },
       require: (requireExpression) => {
         const { arguments: requireArguments } = requireExpression;
         if (requireArguments.length > 1) {
@@ -147,7 +156,7 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule) {
         }
 
         const argValue = firstArgument.expression.value;
-        const extension =  extname(argValue) || '.js';
+        const extension = extname(argValue) || '.js';
         staticRequireStatements.push(
           pathJoin(
             dirname(sourceFilePath),
@@ -159,6 +168,7 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule) {
   });
 
   return {
+    importStatements,
     static: staticRequireStatements,
   }
 }
@@ -167,6 +177,8 @@ export function parseFile(fileName: string, contents: string) {
   const ext = extname(fileName);
   return parseSync(contents, {
     syntax: (ext === '.ts' || ext === '.tsx') ? 'typescript' : 'ecmascript',
+    decorators: true,
+    decoratorsBeforeExport: true,
     tsx: true,
     jsx: true,
   });
@@ -179,23 +191,37 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
       state.addRef(path);
     }
 
-    const ast = parseFile(path, packageFiles[path]);
-    const { static: staticRequireExpressions } = resolveRequireStatements(path, ast);
-    staticRequireExpressions.forEach((path) => state.addRef(path));
+    try {
+      const ast = parseFile(path, packageFiles[path]);
+      const { importStatements, static: staticRequireExpressions } = resolveRequireStatements(path, ast, state);
+      [...importStatements, ...staticRequireExpressions].forEach((path) => state.addRef(path));
+    } catch { }
   });
 }
 
 
 export async function analyze({ cwd, require: requireParam = require }: Params) {
   const usedFiles: Record<string, true> = {};
+  const resolvers: PathResolver[] = [];
   const state: State = {
+    resolvePath: (path: string) => {
+      for(const plugin of plugins) {
+        const resolved = plugin?.resolver?.(path);
+        if (resolved !== undefined) {
+          return resolved;
+        }
+      }
+    },
+    addResolver: (resolver: PathResolver) => {
+      resolvers.push(resolver);
+    },
     require: requireParam,
     isReferenced(path) {
       return usedFiles[path] === true;
     },
     isLibraryFile(path) {
       for (const plugin of plugins) {
-        if (plugin.fileBelongsTo(path) === true) {
+        if (plugin.fileBelongsTo?.(path) === true) {
           return true;
         }
       }
@@ -205,25 +231,19 @@ export async function analyze({ cwd, require: requireParam = require }: Params) 
       usedFiles[path] = true;
     },
   }
-
+  
   const packageDef = await parsePackage({ cwd, state });
   const {
     plugins,
     files: sourceFiles,
-    entryPoints: packageEntrypoints,
   } = packageDef;
-  
-  Object.keys(packageEntrypoints).forEach((key) => {
-    state.addRef(key);
-  });
-
 
   await walkFiles(packageDef, state);
 
   const unusedFiles = Object.keys(sourceFiles).filter((path: keyof typeof sourceFiles) => {
     return usedFiles[path] === undefined;
   });
-  
+
   return {
     unusedFiles,
   }

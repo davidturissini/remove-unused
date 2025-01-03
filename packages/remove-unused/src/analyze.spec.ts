@@ -274,6 +274,123 @@ describe('analyze', () => {
         expect(unusedFiles).toEqual([]);
       });
     });
+
+    describe('root dir', () => {
+      it('should not mark node script files as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.ts",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {},
+            "devDependencies": {
+              "next": "1.2.2"
+            },
+            "scripts": {
+              "dev": "next dev"
+            },
+          }),
+          '/test/next.config.js': '// used by next'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          require(path: string) {
+            const contents = readFileSync(path).toString();
+            return eval(contents);
+          }
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+    });
+
+    describe('jsconfig.json paths', () => {
+      it('should not report aliased path as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "next": "^29.7.0",
+            },
+            "scripts": {
+              "dev": "next dev"
+            },
+            "private": true
+          }),
+          '/test/src/pages/index.js': `
+            import Foo from '@/components/Foo';
+          `,
+          '/test/src/components/Foo.jsx': '// referenced via alias',
+          '/test/jsconfig.json': `
+            {
+              "compilerOptions": {
+                "baseUrl": ".",
+                "paths": {
+                  "@/*": ["src/*"]
+                }
+              }
+            }
+          `
+        });
+  
+        const { unusedFiles } = await analyze({
+          cwd: '/test'
+        });
+  
+        expect(unusedFiles).toEqual([]);
+      });
+    });
+  });
+
+  describe('Tailwind', () => {
+    it('should not mark tailwind.config.js files as unused', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "main": "src/main.ts",
+          "version": "0.0.1",
+          "devDependencies": {
+            "tailwindcss": "^29.7.0",
+          },
+          "private": true,
+          "dependencies": {}
+        }),
+        '/test/tailwind.config.js': '// used by jest'
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test'
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+  });
+
+  describe('Prettier', () => {
+    it('should not mark tailwind.config.js files as unused', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "main": "src/main.ts",
+          "version": "0.0.1",
+          "devDependencies": {
+            "prettier": "^29.7.0",
+          },
+          "private": true,
+          "dependencies": {}
+        }),
+        '/test/prettier.config.js': '// used by jest'
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test'
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
   });
 });
 
@@ -283,6 +400,37 @@ describe('parseFile', () => {
       parseFile('foo.ts', `
         type Foo = { prop: string };
         const foo: Foo = { prop: 'asd' };  
+      `)
+    }).not.toThrow();
+  });
+
+  it('should support decorators', () => {
+    expect(() => {
+      parseFile('foo.ts', `
+        @Component({ })
+        class Foo {}
+      `)
+    }).not.toThrow();
+  });
+
+  it('should support decoratorsBeforeExport', () => {
+    expect(() => {
+      parseFile('foo.js', `
+        import { Component } from '@angular/core'
+
+        @Component({
+          selector: 'app-nav',
+          template: \`
+            <nav class="py-4 px-6 text-sm font-medium">
+              <ul class="flex space-x-3">
+                <ng-content></ng-content>
+              </ul>
+            </nav>
+          \`,
+        })
+
+        export class NavComponent {}
+
       `)
     }).not.toThrow();
   });

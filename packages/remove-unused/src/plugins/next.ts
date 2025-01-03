@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join as pathJoin } from 'node:path';
 import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
 import { z } from 'zod';
@@ -33,10 +33,11 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
     throw new Error('Next is listeed as dependency but no Next scripts are defined!');
   }
 
-  const nextDir = nextJsScript.split(' ')[2];
+  const hasConfiguredLocalDir = nextJsScript.split(' ')[2] !== undefined;
+  const localNextDir = nextJsScript.split(' ')[2] ?? 'src';
 
-  const absoluteDir = pathJoin(cwd, nextDir);
-  const nextJsConfig = pathJoin(absoluteDir, 'next.config.js');
+  const absoluteDir = pathJoin(cwd, localNextDir);
+  const nextJsConfig = hasConfiguredLocalDir === true ? pathJoin(absoluteDir, 'next.config.js') : pathJoin(cwd, 'next.config.js');
   const postCssConfigPath = pathJoin(absoluteDir, 'postcss.config.js');
   state.addRef(nextJsConfig);
 
