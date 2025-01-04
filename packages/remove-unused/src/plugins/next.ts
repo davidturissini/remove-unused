@@ -15,17 +15,29 @@ const nextJsConfigSchema = z.object({
   pageExtensions: z.array(z.string()).default(['jsx', 'js', 'tsx', 'ts'])
 });
 
+const nextJsConfigSchemaImported = z.object({
+  default: nextJsConfigSchema.optional(),
+});
+
 const CONFIG_FILE_NAMES = [
   'next.config.js',
   'next.config.mjs'
 ]
+
+async function importNextJsConfig(absPath: string, state: State) {
+  const value = await state.import(absPath);
+  if (value === undefined) {
+    return;
+  }
+  return nextJsConfigSchemaImported.parse(value).default
+}
 
 async function loadConfig(cwd: string, state: State) {
   for(const fileName of CONFIG_FILE_NAMES) {
     const absPath = pathJoin(cwd, fileName);
     if (existsSync(absPath)) {
       state.addRef(absPath);
-      const contents = state.require(absPath);
+      const contents = extname(absPath) === '.mjs' ? await importNextJsConfig(absPath, state) : state.require(absPath);
       const parsed = nextJsConfigSchema.safeParse(contents);
       if (parsed.success === false) {
         continue;

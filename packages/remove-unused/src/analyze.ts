@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join as pathJoin, extname, dirname, parse } from 'node:path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { join as pathJoin, basename, extname, dirname } from 'node:path';
 import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration } from '@swc/core';
 import { z } from 'zod';
 import { remark } from 'remark'
@@ -11,10 +11,12 @@ import { plugin as nextPlugin } from './plugins/next.js';
 import { plugin as prettierPlugin } from './plugins/prettier.js';
 import { plugin as tailwindPlugin } from './plugins/tailwind.js';
 import { plugin as jsConfigPlugin } from './plugins/jsconfig.js';
+import { plugin as postcssPlugin } from './plugins/postcss.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 
 type Params = {
   cwd: string;
+  import?: (path: string) => Promise<unknown>;
   require?: (path: string) => unknown;
 }
 
@@ -31,6 +33,7 @@ export type PackageJsonSchema = z.infer<typeof packageJsonSchema>;
 type PathResolver = (aliasOrPath: string) => (string | undefined);
 
 export type State = {
+  import(path: string): Promise<unknown>
   resolvePath(path: string): (string | undefined);
   addResolver(resolver: PathResolver): void;
   require(path: string): unknown;
@@ -73,6 +76,7 @@ const pluginsRegistry = [
   prettierPlugin,
   jsConfigPlugin,
   packageJsonPlugin,
+  postcssPlugin,
 ] as const;
 
 async function parsePackage({ cwd, state }: { cwd: string, state: State }): Promise<PackageDefinition> {
@@ -81,14 +85,14 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
   const typescriptFiles = globSync(
     pathJoin(cwd, '**/*.{js,ts,jsx,tsx,mjs,cjs}'),
     {
-      ignore: ['**/node_modules/**']
+      ignore: pathJoin(cwd, '**/node_modules/**')
     }
   );
 
   const mdxFiles = globSync(
     pathJoin(cwd, '**/*.mdx'),
     {
-      ignore: ['**/node_modules/**']
+      ignore: pathJoin(cwd, '**/node_modules/**')
     }
   );
 
@@ -110,6 +114,9 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
   })
 
   typescriptFiles.forEach((filePath) => {
+    if (statSync(filePath).isDirectory() === true) {
+      return;
+    }
     files[filePath] = {
       type: 'ecmascript',
       source: readFileSync(filePath).toString()
@@ -154,6 +161,39 @@ function walk(exp: ModuleItem | Expression, visitor: {
   }
 }
 
+const IMPORT_EXTENSIONS = ['.ts', '.js', '.mjs', '.tsx', '.jsx'];
+
+
+function resolveImportPath(sourceDirectory: string, importPath: string) {
+  const noQueryParam = importPath.split('?')[0];
+  const extension = extname(noQueryParam);
+  let normalized: string = pathJoin(sourceDirectory, `${noQueryParam.replace(extension, '')}${extension}`);
+
+  // An import with no extension
+  if (extension === '') {
+    // check if there is an index file
+    for(const indexFileName of ['index.ts', 'index.js', 'index.mjs']) {
+      const indexFilePath = pathJoin(sourceDirectory, noQueryParam, indexFileName);
+      if (existsSync(indexFilePath)) {
+        return indexFilePath;
+      }
+    }
+
+    const normalizedWithExtension = IMPORT_EXTENSIONS.map((ext) => {
+      const path = `${noQueryParam.replace(ext, '')}${ext}`;
+      return pathJoin(sourceDirectory, path);
+    }).find((absPath) => {
+      return existsSync(absPath);
+    })
+    
+    if (normalizedWithExtension !== undefined) {
+      normalized = normalizedWithExtension;
+    }
+  }
+  
+  return normalized;
+}
+
 function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state: State) {
   const staticRequireStatements: string[] = [];
   const importStatements: string[] = [];
@@ -164,13 +204,8 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
         if (importStatement.source.type === 'StringLiteral') {
           const resolved = state.resolvePath(importStatement.source.value);
           if (resolved === undefined) {
-            const extension = extname(importStatement.source.value) || '.ts';
-            importStatements.push(
-              pathJoin(
-                dirname(sourceFilePath),
-                `${importStatement.source.value}${extension}`
-              )
-            );
+            const resolvedFilePath = resolveImportPath(dirname(sourceFilePath), importStatement.source.value);
+            importStatements.push(resolvedFilePath);
             return;
           }
           importStatements.push(resolved);
@@ -316,10 +351,17 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
 }
 
 
-export async function analyze({ cwd, require: requireParam = require }: Params) {
+export async function analyze({ cwd, require: requireParam = require, import: importParam }: Params) {
   const usedFiles: Record<string, true> = {};
   const resolvers: PathResolver[] = [];
   const state: State = {
+    async import(path) {
+      if (importParam !== undefined) {
+        return await importParam(path);
+      }
+
+      return await import(path);
+    },
     resolvePath: (path: string) => {
       for (const plugin of plugins) {
         const resolved = plugin?.resolver?.(path);

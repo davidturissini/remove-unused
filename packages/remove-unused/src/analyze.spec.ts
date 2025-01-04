@@ -1,7 +1,12 @@
 import mock from 'mock-fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseFile, analyze } from './analyze.js';
 import { readFileSync } from 'fs';
+
+async function mockImport(path: string) {
+  const contents = readFileSync(path).toString();
+  return Promise.resolve(eval(contents));
+}
 
 function mockRequire(path: string) {
   const contents = readFileSync(path).toString();
@@ -188,6 +193,136 @@ describe('analyze', () => {
     });
   });
 
+  describe('Imports', () => {
+    it('should not mark index.js files as unused', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "main": "src/main.ts",
+          "version": "0.0.1",
+          "private": true,
+          "dependencies": {},
+          "scripts": {
+            "dev": "next dev demo"
+          },
+        }),
+        '/test/src/main.ts': `
+          import { foo } from './folder';
+        `,
+        '/test/src/folder/index.ts': `// used`
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test',
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+
+    it('should not mark aliased imports that have index.js files as unused', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "version": "0.0.1",
+          "private": true,
+          "dependencies": {},
+          "devDependencies": {
+            "next": "1.2.2"
+          },
+          "scripts": {
+            "dev": "next dev"
+          },
+        }),
+        '/test/jsconfig.json': `
+          {
+            "compilerOptions": {
+              "baseUrl": ".",
+              "paths": {
+                "@/*": ["src/*"]
+              }
+            }
+          }
+        `,
+        '/test/next.config.js': `
+          module.exports = {};
+        `,
+        '/test/src/components/Foo/index.ts': '// referenced via path alias',
+        '/test/src/pages/Foo.tsx': `
+            import Foo from '@/components/Foo'
+        `
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test',
+        require: mockRequire,
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+
+    it('should mark imports from config as used', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "version": "0.0.1",
+          "private": true,
+          "scripts": {
+            "dev": "next dev"
+          },
+          "dependencies": {
+            next: '1.2.3'
+          }
+        }),
+        '/test/next.config.mjs': `
+          import { foo } from './file.mjs';
+        `,
+        '/test/file.mjs': '//used'
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test',
+        import: async () => {
+          return {
+            default: {},
+          }
+        }
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+
+    it('ignore ? from import statements', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "version": "0.0.1",
+          "private": true,
+          "scripts": {
+            "dev": "next dev"
+          },
+          "dependencies": {
+            next: '1.2.3'
+          }
+        }),
+        '/test/next.config.mjs': `
+          import { foo } from './file.mjs?foo';
+        `,
+        '/test/file.mjs': '//used'
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test',
+        import: async () => {
+          return {
+            default: {},
+          }
+        }
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+  });
+
   describe('Plugins', () => {
     describe('Jest', () => {
       it('should not mark .test.js files as unused', async () => {
@@ -327,13 +462,43 @@ describe('analyze', () => {
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require(path: string) {
-              const contents = readFileSync(path).toString();
-              return eval(contents);
-            }
+            import: mockImport,
+            require: mockRequire,
           });
 
           expect(unusedFiles).toEqual([]);
+        });
+
+        describe('mjs config file', () => {
+          it('should import the file', async () => {
+            mock({
+              '/test/package.json': JSON.stringify({
+                "name": "unused-typescript-file",
+                "main": "src/main.ts",
+                "version": "0.0.1",
+                "private": true,
+                "dependencies": {},
+                "devDependencies": {
+                  "next": "1.2.2"
+                },
+                "scripts": {
+                  "dev": "next dev"
+                },
+              }),
+              '/test/next.config.mjs': '// used by next'
+            });
+
+            const importSpy = vi.fn();
+  
+            await analyze({
+              cwd: '/test',
+              import: importSpy,
+              require: mockRequire
+            });
+
+            expect(importSpy).toHaveBeenCalledWith('/test/next.config.mjs');
+  
+          })
         });
       });
 
@@ -371,6 +536,52 @@ describe('analyze', () => {
 
           expect(unusedFiles).toEqual([]);
         });
+
+        it('should not mark MDX files in pages dir as unused when config is mjs', async () => {
+          mock({
+            '/test/package.json': JSON.stringify({
+              "name": "unused-typescript-file",
+              "main": "src/main.ts",
+              "version": "0.0.1",
+              "private": true,
+              "dependencies": {},
+              "devDependencies": {
+                "next": "1.2.2"
+              },
+              "scripts": {
+                "dev": "next dev"
+              },
+            }),
+            '/test/next.config.mjs': `
+              export default {
+                pageExtensions: ['mdx'],
+              }
+            `,
+            '/test/src/pages/Foo.mdx': `
+import Foo from '@/components/Foo'
+
+<Foo />
+            `
+          });
+
+          const { unusedFiles } = await analyze({
+            cwd: '/test',
+            import: async (path) => {
+              if (path === '/test/next.config.mjs') {
+                return {
+                  default: {
+                    pageExtensions: ['mdx'],
+                  }
+                }
+              }
+              throw new Error('Unexpected import');
+            },
+            require: mockRequire
+          });
+
+          expect(unusedFiles).toEqual([]);
+
+        })
 
         it('should mark files in pages dir as unused when pageExtensions does not contain mdx', async () => {
           mock({
@@ -626,7 +837,51 @@ import Foo from '@/components/Foo'
         });
       });
     });
+
+    describe('postcss', () => {
+      it('should not mark postcss.config.js as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "postcss": "0.0.0"
+            },
+            "private": true
+          }),
+          '/test/postcss.config.js': `//postcss config`
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          require: mockRequire,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+    });
   });
+
+  describe('node_modules', () => {
+    it('should not include any files from node_modules', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "version": "0.0.1",
+          "private": true,
+          "dependencies": {}
+        }),
+        '/test/node_modules/package/file.ts': '// in node modules'
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test'
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+  });
+
 });
 
 describe('parseFile', () => {

@@ -19,7 +19,9 @@ const jsConfigSchema = z.object({
 
 const EXTENSIONS = [
   '.jsx',
-  '.js'
+  '.js',
+  '.ts',
+  '.tsx'
 ]
 
 export async function plugin({ cwd, state }: { cwd: string, state: State }): Promise<Plugin | undefined> {
@@ -43,10 +45,19 @@ export async function plugin({ cwd, state }: { cwd: string, state: State }): Pro
     resolver: (importPath) => {
       const resolved = matchPathFn(importPath, undefined, undefined, EXTENSIONS);
 
+      if (resolved === undefined) {
+        return undefined;
+      }
+
       for(const ext of EXTENSIONS) {
         const path = `${resolved}${ext}`;
         if (existsSync(path) === true) {
           return path;
+        }
+        
+        const withIndex = pathJoin(resolved, `index${ext}`);
+        if (existsSync(withIndex) === true) {
+          return withIndex;
         }
       }
   
