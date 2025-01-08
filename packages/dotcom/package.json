@@ -1,5 +1,14 @@
 {
   "name": "@remove-unused/dotcom",
   "version": "0.0.5-1",
-  "private": true
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17",
+    "@astrojs/tailwind": "5.1.4",
+    "astro": "5.1.3"
+  }
 }
