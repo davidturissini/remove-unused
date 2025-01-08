@@ -79,49 +79,75 @@ describe('analyze', () => {
     });
   });
 
-  describe('Entrypoint from "main" field', () => {
-    it('should not report as unused file', async () => {
-      mock({
-        '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "main": "src/main.ts",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {}
-        }),
-        '/test/src/main.ts': '//used!'
-      });
+  describe('Entrypoints', () => {
+    describe('"main" field', () => {
+      it('should not report as unused file', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.ts",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {}
+          }),
+          '/test/src/main.ts': '//used!'
+        });
 
-      const { unusedFiles } = await analyze({
-        cwd: '/test',
-        import: mockImport,
-      });
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
 
-      expect(unusedFiles).toEqual([]);
+        expect(unusedFiles).toEqual([]);
+      });
     });
-  });
 
-  describe('Entrypoint from "types" field', () => {
-    it('should not report as unused file', async () => {
-      mock({
-        '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "main": "src/main.ts",
-          "types": "src/types.ts",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {}
-        }),
-        '/test/src/main.ts': '//used!',
-        '/test/src/types.ts': '//used!'
+    describe('"types" field', () => {
+      it('should not report as unused file', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.ts",
+            "types": "src/types.ts",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {}
+          }),
+          '/test/src/main.ts': '//used!',
+          '/test/src/types.ts': '//used!'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
       });
+    });
 
-      const { unusedFiles } = await analyze({
-        cwd: '/test',
-        import: mockImport,
+    describe('"exports"', () => {
+      it('should not mark files in exports as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "exports": {
+              ".": "./index.js",
+            },
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {}
+          }),
+          '/test/index.js': '//used!',
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
       });
-
-      expect(unusedFiles).toEqual([]);
     });
   });
 
@@ -196,6 +222,69 @@ describe('analyze', () => {
       });
 
       expect(unusedFiles).toEqual([]);
+    });
+  });
+
+  describe('d.ts files', () => {
+    describe('js file with d.ts file', () => {
+      it('should not mark entry d.ts file as unused if tsconfig is present', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.js",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {},
+            "scripts": {
+              "dev": "next dev demo"
+            },
+          }),
+          'tsconfig.json': {},
+          '/test/src/main.js': `
+            // js file
+          `,
+          '/test/src/main.d.ts': `
+            // d ts file
+          `,
+        });
+  
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+  
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not mark imported d.ts file as unused if tsconfig is present', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.js",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {},
+            "scripts": {
+              "dev": "next dev demo"
+            },
+          }),
+          'tsconfig.json': {},
+          '/test/src/main.js': `
+            export { foo } from './file.js';
+          `,
+          '/test/src/file.js': '',
+          '/test/src/file.d.ts': `
+            // d ts file
+          `,
+        });
+  
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+  
+        expect(unusedFiles).toEqual([]);
+      });
     });
   });
 
@@ -328,6 +417,34 @@ describe('analyze', () => {
 
       expect(unusedFiles).toEqual([]);
     });
+  });
+
+  describe('export statements', () => {
+    it('should not mark files referenced in export statements as unused', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "main": "src/main.ts",
+          "version": "0.0.1",
+          "private": true,
+          "dependencies": {},
+          "scripts": {
+            "dev": "next dev demo"
+          },
+        }),
+        '/test/src/main.ts': `
+          export { foo } from './file.ts';
+        `,
+        '/test/src/file.ts': `// used`
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test',
+        import: mockImport,
+      });
+
+      expect(unusedFiles).toEqual([]);
+    })
   });
 
   describe('Plugins', () => {
@@ -836,6 +953,29 @@ import Foo from '@/components/Foo'
       });
     });
 
+    describe('eslint', () => {
+      it('should not mark eslint.config.js as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "eslint": "0.0.0"
+            },
+            "private": true
+          }),
+          '/test/eslint.config.js': '// eslint config'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+    });
+
     describe('postcss', () => {
       it('should not mark postcss.config.js as unused', async () => {
         mock({
@@ -848,6 +988,50 @@ import Foo from '@/components/Foo'
             "private": true
           }),
           '/test/postcss.config.js': `//postcss config`
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+    });
+
+    describe('bnt', () => {
+      it('should not mark foo.test.js as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "better-node-test": "0.0.0"
+            },
+            "private": true
+          }),
+          '/test/foo.test.js': '// test file'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not mark foo.test.ts as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "better-node-test": "0.0.0"
+            },
+            "private": true
+          }),
+          '/test/foo.test.ts': '// test file'
         });
 
         const { unusedFiles } = await analyze({

@@ -1,10 +1,12 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { join as pathJoin, basename, extname, dirname } from 'node:path';
-import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration } from '@swc/core';
+import { join as pathJoin, extname, dirname } from 'node:path';
+import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration, ExportDeclaration, ExportNamedDeclaration } from '@swc/core';
 import { z } from 'zod';
 import { remark } from 'remark'
 import remarkMdx from 'remark-mdx'
 import { globSync } from 'glob';
+import { plugin as bntPlugin } from './plugins/bnt.js';
+import { plugin as eslintPlugin } from './plugins/eslint.js';
 import { plugin as jestPlugin } from './plugins/jest.js';
 import { plugin as packageJsonScriptsPlugin } from './plugins/node-scripts.js';
 import { plugin as nextPlugin } from './plugins/next.js';
@@ -14,6 +16,20 @@ import { plugin as jsConfigPlugin } from './plugins/jsconfig.js';
 import { plugin as postcssPlugin } from './plugins/postcss.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 
+
+const pluginsRegistry = [
+  jestPlugin,
+  packageJsonScriptsPlugin,
+  nextPlugin,
+  tailwindPlugin,
+  prettierPlugin,
+  jsConfigPlugin,
+  packageJsonPlugin,
+  postcssPlugin,
+  eslintPlugin,
+  bntPlugin,
+] as const;
+
 type Params = {
   cwd: string;
   import?: (path: string) => Promise<unknown>;
@@ -22,6 +38,9 @@ type Params = {
 const packageJsonSchema = z.object({
   main: z.string().optional(),
   types: z.string().optional(),
+  exports: z.record(
+    z.string(), z.string(),
+  ).optional(),
   devDependencies: z.record(z.string(), z.string()).optional(),
   dependencies: z.record(z.string(), z.string()).optional(),
   scripts: z.record(z.string(), z.string()).optional(),
@@ -65,17 +84,6 @@ function readPackageJson({ cwd }: Pick<Params, 'cwd'>) {
   ).toString();
   return packageJsonSchema.parse(JSON.parse(contents));
 }
-
-const pluginsRegistry = [
-  jestPlugin,
-  packageJsonScriptsPlugin,
-  nextPlugin,
-  tailwindPlugin,
-  prettierPlugin,
-  jsConfigPlugin,
-  packageJsonPlugin,
-  postcssPlugin,
-] as const;
 
 async function parsePackage({ cwd, state }: { cwd: string, state: State }): Promise<PackageDefinition> {
   const packageJson = readPackageJson({ cwd });
@@ -130,11 +138,16 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
 
 function walk(exp: ModuleItem | Expression, visitor: {
   require: (exp: CallExpression) => void;
+  exportStatement: (exp: ExportNamedDeclaration) => void;
   importStatement: (exp: ImportDeclaration) => void;
 }) {
   switch (exp.type) {
     case 'ImportDeclaration': {
       visitor.importStatement(exp);
+      break;
+    }
+    case 'ExportNamedDeclaration': {
+      visitor.exportStatement(exp);
       break;
     }
     case 'VariableDeclaration': {
@@ -198,6 +211,17 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
 
   ast.body.forEach((body) => {
     walk(body, {
+      exportStatement: (exportStatement) => {
+        if (exportStatement.source?.type === 'StringLiteral') {
+          const resolved = state.resolvePath(exportStatement.source.value);
+          if (resolved === undefined) {
+            const resolvedFilePath = resolveImportPath(dirname(sourceFilePath), exportStatement.source.value);
+            importStatements.push(resolvedFilePath);
+            return;
+          }
+          importStatements.push(resolved);
+        }
+      },
       importStatement: (importStatement) => {
         if (importStatement.source.type === 'StringLiteral') {
           const resolved = state.resolvePath(importStatement.source.value);
@@ -343,7 +367,13 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
       const { importStatements, static: staticRequireExpressions } = collectFileReferences(path, ast, state);
 
 
-      [...importStatements, ...staticRequireExpressions].forEach((path) => state.addRef(path));
+      [...importStatements, ...staticRequireExpressions].forEach((path) => {
+        state.addRef(path);
+        const extName = extname(path);
+        if (extName === '.js' && existsSync(path.replace('.js', '.d.ts'))) {
+          state.addRef(path.replace('.js', '.d.ts'));
+        } 
+    });
     } catch { }
   });
 }
