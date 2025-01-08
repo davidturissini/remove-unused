@@ -1,0 +1,5 @@
+{
+  "release": {
+    "projects": ["remove-unused"]
+  }
+}

@@ -7,6 +7,11 @@
     "url": "https://github.com/davidturissini/remove-unused",
     "directory": "packages/remove-unused"
   },
+  "files": [
+    "package.json",
+    "dist",
+    "bin"
+  ],
   "bin": {
     "remove-unused": "bin/remove-unused.mjs"
   },
