@@ -67,7 +67,7 @@ importers:
   packages/remove-unused:
     dependencies:
       '@remove-unused/engine':
-        specifier: workspace:*
+        specifier: 0.0.5-0
         version: link:../engine
       yargs:
         specifier: 17.7.2
