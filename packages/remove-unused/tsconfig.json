@@ -4,6 +4,6 @@
     "target": "es2015",
     "module": "CommonJS",
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "moduleResolution": "bundler"
   }
 }
