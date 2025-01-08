@@ -5,13 +5,11 @@ import { readFileSync } from 'fs';
 
 async function mockImport(path: string) {
   const contents = readFileSync(path).toString();
-  return Promise.resolve(eval(contents));
+  return Promise.resolve({
+    default: eval(contents)
+  });
 }
 
-function mockRequire(path: string) {
-  const contents = readFileSync(path).toString();
-  return eval(contents);
-}
 
 describe('analyze', () => {
   describe('unused ts file', () => {
@@ -27,7 +25,8 @@ describe('analyze', () => {
       });
 
       const { unusedFiles } = await analyze({
-        cwd: '/test'
+        cwd: '/test',
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([
@@ -48,7 +47,8 @@ describe('analyze', () => {
         });
 
         const { unusedFiles } = await analyze({
-          cwd: '/test'
+          cwd: '/test',
+          import: mockImport,
         });
 
         expect(unusedFiles).toEqual([]);
@@ -69,7 +69,8 @@ describe('analyze', () => {
       });
 
       const { unusedFiles } = await analyze({
-        cwd: '/test'
+        cwd: '/test',
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([
@@ -92,7 +93,8 @@ describe('analyze', () => {
       });
 
       const { unusedFiles } = await analyze({
-        cwd: '/test'
+        cwd: '/test',
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);
@@ -115,7 +117,8 @@ describe('analyze', () => {
       });
 
       const { unusedFiles } = await analyze({
-        cwd: '/test'
+        cwd: '/test',
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);
@@ -138,7 +141,8 @@ describe('analyze', () => {
         });
 
         const { unusedFiles } = await analyze({
-          cwd: '/test'
+          cwd: '/test',
+          import: mockImport,
         });
 
         expect(unusedFiles).toEqual([]);
@@ -161,7 +165,8 @@ describe('analyze', () => {
       });
 
       const { unusedFiles } = await analyze({
-        cwd: '/test'
+        cwd: '/test',
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);
@@ -186,7 +191,8 @@ describe('analyze', () => {
       });
 
       const { unusedFiles } = await analyze({
-        cwd: '/test'
+        cwd: '/test',
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);
@@ -214,6 +220,7 @@ describe('analyze', () => {
 
       const { unusedFiles } = await analyze({
         cwd: '/test',
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);
@@ -254,7 +261,7 @@ describe('analyze', () => {
 
       const { unusedFiles } = await analyze({
         cwd: '/test',
-        require: mockRequire,
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);
@@ -392,7 +399,8 @@ describe('analyze', () => {
         });
 
         const { unusedFiles } = await analyze({
-          cwd: '/test'
+          cwd: '/test',
+          import: mockImport,
         });
 
         expect(unusedFiles).toEqual([]);
@@ -431,10 +439,7 @@ describe('analyze', () => {
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require(path: string) {
-              const contents = readFileSync(path).toString();
-              return eval(contents);
-            }
+            import: mockImport,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -463,7 +468,6 @@ describe('analyze', () => {
           const { unusedFiles } = await analyze({
             cwd: '/test',
             import: mockImport,
-            require: mockRequire,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -489,15 +493,14 @@ describe('analyze', () => {
             });
 
             const importSpy = vi.fn();
-  
+
             await analyze({
               cwd: '/test',
               import: importSpy,
-              require: mockRequire
             });
 
             expect(importSpy).toHaveBeenCalledWith('/test/next.config.mjs');
-  
+
           })
         });
       });
@@ -528,10 +531,8 @@ describe('analyze', () => {
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require(path: string) {
-              const contents = readFileSync(path).toString();
-              return eval(contents);
-            }
+
+            import: mockImport,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -576,7 +577,6 @@ import Foo from '@/components/Foo'
               }
               throw new Error('Unexpected import');
             },
-            require: mockRequire
           });
 
           expect(unusedFiles).toEqual([]);
@@ -606,10 +606,8 @@ import Foo from '@/components/Foo'
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require(path: string) {
-              const contents = readFileSync(path).toString();
-              return eval(contents);
-            }
+
+            import: mockImport,
           });
 
           expect(unusedFiles).toEqual([
@@ -657,7 +655,7 @@ import Foo from '@/components/Foo'
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require: mockRequire,
+            import: mockImport,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -749,7 +747,7 @@ import Foo from '@/components/Foo'
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require: mockRequire,
+            import: mockImport,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -789,7 +787,7 @@ import Foo from '@/components/Foo'
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require: mockRequire,
+            import: mockImport,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -830,7 +828,7 @@ import Foo from '@/components/Foo'
 
           const { unusedFiles } = await analyze({
             cwd: '/test',
-            require: mockRequire,
+            import: mockImport,
           });
 
           expect(unusedFiles).toEqual([]);
@@ -854,7 +852,7 @@ import Foo from '@/components/Foo'
 
         const { unusedFiles } = await analyze({
           cwd: '/test',
-          require: mockRequire,
+          import: mockImport,
         });
 
         expect(unusedFiles).toEqual([]);
@@ -875,7 +873,9 @@ import Foo from '@/components/Foo'
       });
 
       const { unusedFiles } = await analyze({
-        cwd: '/test'
+        cwd: '/test',
+
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);

@@ -17,7 +17,6 @@ import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 type Params = {
   cwd: string;
   import?: (path: string) => Promise<unknown>;
-  require?: (path: string) => unknown;
 }
 
 const packageJsonSchema = z.object({
@@ -359,6 +358,7 @@ export async function analyze({ cwd, import: importParam }: Params) {
         return await importParam(path);
       }
 
+      throw new Error('what');
       return await import(path);
     },
     resolvePath: (path: string) => {

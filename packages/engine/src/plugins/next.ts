@@ -4,11 +4,13 @@ import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
 import { z } from 'zod';
 
 const postCssConfigSchema = z.object({
-  plugins: z.object({
-    tailwindcss: z.object({
-      config: z.string()
-    }).optional(),
-  }).optional()
+  default: z.object({
+    plugins: z.object({
+      tailwindcss: z.object({
+        config: z.string()
+      }).optional(),
+    }).optional()
+  }).optional(),
 });
 
 const nextJsConfigSchema = z.object({
@@ -87,8 +89,8 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
     state.addRef(postCssConfigPath);
     const postCssConfig = await state.import(postCssConfigPath);
     const parsed = postCssConfigSchema.safeParse(postCssConfig);
-    if (parsed.success === true && parsed?.data?.plugins?.tailwindcss?.config !== undefined) {
-      state.addRef(parsed.data.plugins.tailwindcss.config);
+    if (parsed.success === true && parsed?.data?.default?.plugins?.tailwindcss?.config !== undefined) {
+      state.addRef(parsed.data.default.plugins.tailwindcss.config);
     }
   }
 

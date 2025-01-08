@@ -22,15 +22,6 @@ importers:
         specifier: 22.10.4
         version: 22.10.4
 
-  packages/e2e:
-    dependencies:
-      remove-unused:
-        specifier: workspace:*
-        version: link:../remove-unused
-      vitest:
-        specifier: 2.1.8
-        version: 2.1.8(@types/node@22.10.4)
-
   packages/engine:
     dependencies:
       '@swc/core':
