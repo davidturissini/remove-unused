@@ -16,10 +16,10 @@
     "remove-unused": "bin/remove-unused.mjs"
   },
   "dependencies": {
+    "@remove-unused/engine": "workspace:*",
     "yargs": "17.7.2"
   },
   "devDependencies": {
-    "@remove-unused/engine": "workspace:*",
     "vite": "6.0.7",
     "rollup-plugin-node-externals": "8.0.0",
     "@types/yargs": "17.0.33"
