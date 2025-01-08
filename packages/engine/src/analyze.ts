@@ -358,7 +358,6 @@ export async function analyze({ cwd, import: importParam }: Params) {
         return await importParam(path);
       }
 
-      throw new Error('what');
       return await import(path);
     },
     resolvePath: (path: string) => {
