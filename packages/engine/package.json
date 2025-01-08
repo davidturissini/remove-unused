@@ -2,6 +2,11 @@
   "name": "@remove-unused/engine",
   "type": "module",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davidturissini/remove-unused",
+    "directory": "packages/engine"
+  },
   "exports": {
     ".": {
       "types": "./dist/main.d.ts",

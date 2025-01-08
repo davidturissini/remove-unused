@@ -2,10 +2,23 @@
   "name": "remove-unused",
   "type": "module",
   "version": "0.0.1",
-  "dependencies": {
-    "@remove-unused/cli": "workspace:*"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davidturissini/remove-unused",
+    "directory": "packages/remove-unused"
+  },
+  "bin": {
+    "remove-unused": "bin/remove-unused.cjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vite": "6.0.7"
   },
   "scripts": {
-    "build": "tsc -b"
+    "build": "vite build",
+    "run": "node bin/remove-unused.cjs"
+  },
+  "engines": {
+    "node": ">=12"
   }
 }
