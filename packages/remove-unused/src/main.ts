@@ -1,1 +1,1 @@
-export { analyze } from './analyze.js';
+console.log('hello');
