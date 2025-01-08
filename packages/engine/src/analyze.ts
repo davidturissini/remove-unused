@@ -36,7 +36,6 @@ export type State = {
   import(path: string): Promise<unknown>
   resolvePath(path: string): (string | undefined);
   addResolver(resolver: PathResolver): void;
-  require(path: string): unknown;
   isReferenced(path: string): boolean;
   addRef(path: string): void;
   isLibraryFile(path: string): boolean;
@@ -351,7 +350,7 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
 }
 
 
-export async function analyze({ cwd, require: requireParam = require, import: importParam }: Params) {
+export async function analyze({ cwd, import: importParam }: Params) {
   const usedFiles: Record<string, true> = {};
   const resolvers: PathResolver[] = [];
   const state: State = {
@@ -373,7 +372,6 @@ export async function analyze({ cwd, require: requireParam = require, import: im
     addResolver: (resolver: PathResolver) => {
       resolvers.push(resolver);
     },
-    require: requireParam,
     isReferenced(path) {
       return usedFiles[path] === true;
     },

@@ -37,7 +37,7 @@ async function loadConfig(cwd: string, state: State) {
     const absPath = pathJoin(cwd, fileName);
     if (existsSync(absPath)) {
       state.addRef(absPath);
-      const contents = extname(absPath) === '.mjs' ? await importNextJsConfig(absPath, state) : state.require(absPath);
+      const contents = await importNextJsConfig(absPath, state);
       const parsed = nextJsConfigSchema.safeParse(contents);
       if (parsed.success === false) {
         continue;
@@ -85,7 +85,7 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
 
   if (existsSync(postCssConfigPath) === true) {
     state.addRef(postCssConfigPath);
-    const postCssConfig = state.require(postCssConfigPath);
+    const postCssConfig = await state.import(postCssConfigPath);
     const parsed = postCssConfigSchema.safeParse(postCssConfig);
     if (parsed.success === true && parsed?.data?.plugins?.tailwindcss?.config !== undefined) {
       state.addRef(parsed.data.plugins.tailwindcss.config);

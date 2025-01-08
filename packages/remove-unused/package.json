@@ -8,17 +8,32 @@
     "directory": "packages/remove-unused"
   },
   "bin": {
-    "remove-unused": "bin/remove-unused.cjs"
+    "remove-unused": "bin/remove-unused.mjs"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@remove-unused/engine": "workspace:*",
+    "yargs": "17.7.2"
+  },
   "devDependencies": {
-    "vite": "6.0.7"
+    "vite": "6.0.7",
+    "rollup-plugin-node-externals": "8.0.0",
+    "@types/yargs": "17.0.33"
   },
   "scripts": {
     "build": "vite build",
-    "run": "node bin/remove-unused.cjs"
+    "bin": "node bin/remove-unused.mjs"
   },
   "engines": {
     "node": ">=12"
+  },
+  "nx": {
+    "targets": {
+      "bin": {
+        "dependsOn": [
+          "build",
+          "^build"
+        ]
+      }
+    }
   }
 }
