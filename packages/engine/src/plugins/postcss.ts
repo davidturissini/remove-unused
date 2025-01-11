@@ -1,7 +1,9 @@
 import { join as pathJoin } from 'node:path';
-import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
+import type { State } from '../analyze.js';
+import { createPlugin } from '../plugin.js';
 
-export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }): Promise<Plugin | undefined> {
+export const plugin = createPlugin(({ state, packageDef }) => {
+  const { packageJson, cwd } = packageDef;
   const { dependencies, devDependencies } = packageJson;
   if (dependencies?.postcss === undefined && devDependencies?.postcss === undefined) {
     return undefined;
@@ -9,4 +11,4 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
   
   const config = pathJoin(cwd, 'postcss.config.js');
   state.addRef(config);
-}
+})

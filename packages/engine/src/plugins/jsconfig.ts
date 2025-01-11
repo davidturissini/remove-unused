@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join as pathJoin } from 'node:path';
-import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
+import { createPlugin } from '../plugin.js';
+import type { State } from '../analyze.js';
 import { z } from 'zod';
 import { createMatchPath } from 'tsconfig-paths';
 
@@ -24,7 +25,8 @@ const EXTENSIONS = [
   '.tsx'
 ]
 
-export async function plugin({ cwd, state }: { cwd: string, state: State }): Promise<Plugin | undefined> {
+export const plugin = createPlugin(({ packageDef }) => {
+  const { cwd } = packageDef;
   const jsConfigFilePath = pathJoin(cwd, 'jsconfig.json');
   if (existsSync(jsConfigFilePath) === false) {
     return;
@@ -64,4 +66,4 @@ export async function plugin({ cwd, state }: { cwd: string, state: State }): Pro
       return undefined;
     }
   }
-}
+})

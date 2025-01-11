@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
 import { join as pathJoin, extname } from 'node:path';
-import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
+import type { State } from '../analyze.js';
 import { z } from 'zod';
+import { createPlugin } from '../plugin.js';
 
 const postCssConfigSchema = z.object({
   default: z.object({
@@ -52,7 +53,8 @@ async function loadConfig(cwd: string, state: State) {
   }
 }
 
-export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }): Promise<Plugin | undefined> {
+export const plugin = createPlugin(async ({ packageDef, state }) => {
+  const { packageJson, cwd } = packageDef;
   const { dependencies, devDependencies } = packageJson;
   if (dependencies?.next === undefined && devDependencies?.next === undefined) {
     return undefined;
@@ -61,7 +63,8 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
   const { scripts: packageJsonScripts } = packageJson;
 
   if (packageJsonScripts === undefined) {
-    throw new Error('Next is listeed as dependency but no scripts are defined!');
+    console.warn(`Next is listed as dependency but no scripts are defined! cwd: ${cwd}`);
+    return;
   }
 
   // resolve which directory nextjs code is
@@ -71,7 +74,8 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
   });
 
   if (nextJsScript === undefined) {
-    throw new Error('Next is listeed as dependency but no Next scripts are defined!');
+    console.warn(`Next is listeed as dependency but no Next scripts are defined! cwd: ${cwd}`);
+    return;
   }
 
   const hasConfiguredLocalDir = nextJsScript.split(' ')[2] !== undefined;
@@ -110,4 +114,4 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
     }
   }
 
-}
+});

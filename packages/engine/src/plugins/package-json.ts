@@ -1,6 +1,8 @@
 import { join as pathJoin, extname } from 'node:path';
-import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
+import type { State } from '../analyze.js';
 import { existsSync } from 'node:fs';
+import { createPlugin } from '../plugin.js';
+import { PackageJsonSchema } from '../package.js';
 
 
 function getPackageEntryPoints(cwd: string, packageJson: PackageJsonSchema) {
@@ -19,16 +21,35 @@ function getPackageEntryPoints(cwd: string, packageJson: PackageJsonSchema) {
 
   if (exports !== undefined) {
     Object.values(exports).forEach((filePath) => {
-      entryPoints[
-        pathJoin(cwd, filePath)
-      ] = true;
+      if (typeof filePath === 'string') {
+        entryPoints[
+          pathJoin(cwd, filePath)
+        ] = true;
+        return;
+      }
+
+      Object.keys(filePath).forEach((entryName) => {
+        const value = filePath[entryName];
+        if (typeof value === 'string') {
+          entryPoints[
+            pathJoin(cwd, value)
+          ] = true;
+          return;
+        }
+        Object.keys(value).forEach((entryName) => {
+          const name = value[entryName];
+          entryPoints[
+            pathJoin(cwd, name)
+          ] = true;
+        })
+      })
     })
   }
 
   return entryPoints;
 }
 
-export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }): Promise<Plugin | undefined> {
+export const plugin = createPlugin(({ packageDef: { packageJson, cwd }, state }) => {
   const entryPoints = getPackageEntryPoints(cwd, packageJson);
 
   Object.keys(entryPoints).forEach((key) => {
@@ -40,4 +61,4 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
   });
 
   return undefined;
-}
+})

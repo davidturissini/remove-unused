@@ -1,15 +1,17 @@
 import { existsSync } from 'node:fs';
+import { createPlugin } from '../plugin.js';
 import { join as pathJoin } from 'node:path';
-import type { PackageJsonSchema, State } from '../analyze.js';
+import type { State } from '../analyze.js';
+import { packageHasDependency } from '../package.js';
 
-export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }) {
-  if (packageJson.dependencies?.eslint === undefined && packageJson.devDependencies?.eslint === undefined) {
+export const plugin = createPlugin(({ packageDef, state }) => {
+  if (packageHasDependency(packageDef, 'eslint') === false) {
     return;
   }
 
   const configFile = 'eslint.config.js';
-  const fullPath = pathJoin(cwd, configFile);
+  const fullPath = pathJoin(packageDef.cwd, configFile);
   if (existsSync(fullPath) === true) {
     state.addRef(fullPath)
   };
-}
+})

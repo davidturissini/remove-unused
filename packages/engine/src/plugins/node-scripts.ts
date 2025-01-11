@@ -1,7 +1,9 @@
 import { join as pathJoin } from 'node:path';
-import type { Plugin, PackageJsonSchema, State } from '../analyze.js';
+import type { State } from '../analyze.js';
+import { createPlugin } from '../plugin.js';
 
-export async function plugin({ packageJson, cwd, state }: { cwd: string, state: State, packageJson: PackageJsonSchema }): Promise<Plugin | undefined> {
+export const plugin = createPlugin(({ state, packageDef }) => {
+  const { packageJson, cwd } = packageDef;
   const { scripts: packageJsonScripts } = packageJson;
   if (packageJsonScripts === undefined) {
     return undefined;
@@ -14,4 +16,4 @@ export async function plugin({ packageJson, cwd, state }: { cwd: string, state: 
       state.addRef(abs);
     }
   });
-}
+})

@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join as pathJoin, extname, dirname } from 'node:path';
 import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration, ExportDeclaration, ExportNamedDeclaration } from '@swc/core';
-import { z } from 'zod';
 import { remark } from 'remark'
 import remarkMdx from 'remark-mdx'
 import { globSync } from 'glob';
@@ -15,6 +14,8 @@ import { plugin as tailwindPlugin } from './plugins/tailwind.js';
 import { plugin as jsConfigPlugin } from './plugins/jsconfig.js';
 import { plugin as postcssPlugin } from './plugins/postcss.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
+import { type PackageDefinition, readPackageJson, type WorkspaceDefinition } from './package.js';
+import type { Plugin, PathResolver } from './plugin.js';
 
 
 const pluginsRegistry = [
@@ -28,27 +29,12 @@ const pluginsRegistry = [
   postcssPlugin,
   eslintPlugin,
   bntPlugin,
-] as const;
+] as const satisfies Plugin[];
 
 type Params = {
   cwd: string;
   import?: (path: string) => Promise<unknown>;
 }
-
-const packageJsonSchema = z.object({
-  main: z.string().optional(),
-  types: z.string().optional(),
-  exports: z.record(
-    z.string(), z.string(),
-  ).optional(),
-  devDependencies: z.record(z.string(), z.string()).optional(),
-  dependencies: z.record(z.string(), z.string()).optional(),
-  scripts: z.record(z.string(), z.string()).optional(),
-}).passthrough();
-
-export type PackageJsonSchema = z.infer<typeof packageJsonSchema>;
-
-type PathResolver = (aliasOrPath: string) => (string | undefined);
 
 export type State = {
   import(path: string): Promise<unknown>
@@ -59,35 +45,23 @@ export type State = {
   isLibraryFile(path: string): boolean;
 }
 
-export type Plugin = {
-  name: string;
-  fileBelongsTo?(path: string): boolean;
-  resolver?: PathResolver;
-}
-
 type FileDef = {
   type: 'ecmascript' | 'mdx';
   source: string
 }
 
-type PackageDefinition = {
-  packageJson: PackageJsonSchema;
-  files: Record<string, FileDef>;
-  plugins: Plugin[];
-}
-
-const PACKAGE_JSON = 'package.json';
-
-function readPackageJson({ cwd }: Pick<Params, 'cwd'>) {
-  const contents = readFileSync(
-    pathJoin(cwd, PACKAGE_JSON)
-  ).toString();
-  return packageJsonSchema.parse(JSON.parse(contents));
-}
-
-async function parsePackage({ cwd, state }: { cwd: string, state: State }): Promise<PackageDefinition> {
+function parsePackage({ parentWorkspace, cwd }: { parentWorkspace: WorkspaceDefinition | null, cwd: string }): PackageDefinition {
   const packageJson = readPackageJson({ cwd });
-  const plugins: Plugin[] = [];
+
+  return {
+    cwd,
+    packageJson,
+    parentWorkspace,
+  }
+}
+
+async function parseWorkspace({ cwd, state }: { cwd: string, state: State }): Promise<WorkspaceDefinition> {
+  const packageJson = readPackageJson({ cwd });
   const typescriptFiles = globSync(
     pathJoin(cwd, '**/*.{js,ts,jsx,tsx,mjs,cjs}'),
     {
@@ -102,15 +76,7 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
     }
   );
 
-  for (const createPlugin of pluginsRegistry) {
-    const plugin = await createPlugin({ cwd, packageJson, state });
-    if (plugin === undefined) {
-      continue;
-    }
-    plugins.push(plugin);
-  }
-
-  const files: PackageDefinition['files'] = {};
+  const files: WorkspaceDefinition['files'] = {};
 
   mdxFiles.forEach((filePath) => {
     files[filePath] = {
@@ -127,13 +93,35 @@ async function parsePackage({ cwd, state }: { cwd: string, state: State }): Prom
       type: 'ecmascript',
       source: readFileSync(filePath).toString()
     };
-  })
+  });
 
-  return {
-    plugins,
+  const { workspaces } = packageJson;
+
+  const packages: PackageDefinition[] = [];
+  const workspace = {
+    packages,
     packageJson,
+    cwd,
     files,
-  };
+    parentWorkspace: null,
+  } as WorkspaceDefinition;
+  
+  
+  
+  const fullPaths = workspaces.map((pathGlob) => {
+    return pathJoin(cwd, pathGlob);
+  });
+
+  for (const packagePath of fullPaths) {
+    packages.push(
+      parsePackage({
+        cwd: packagePath,
+        parentWorkspace: workspace,
+      })
+    )
+  }
+
+  return workspace;
 }
 
 function walk(exp: ModuleItem | Expression, visitor: {
@@ -355,7 +343,7 @@ function collectFileReferences(path: string, ast: AstDef, state: State) {
   }
 }
 
-async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files'>, state: State) {
+async function walkFiles({ files: packageFiles }: Pick<WorkspaceDefinition, 'files'>, state: State) {
   const filePaths = Object.keys(packageFiles) as Array<keyof typeof packageFiles>;
   filePaths.forEach((path) => {
     if (state.isReferenced(path) === false && state.isLibraryFile(path) === true) {
@@ -382,6 +370,7 @@ async function walkFiles({ files: packageFiles }: Pick<PackageDefinition, 'files
 export async function analyze({ cwd, import: importParam }: Params) {
   const usedFiles: Record<string, true> = {};
   const resolvers: PathResolver[] = [];
+  const plugins: Plugin[] = [];
   const state: State = {
     async import(path) {
       if (importParam !== undefined) {
@@ -417,13 +406,23 @@ export async function analyze({ cwd, import: importParam }: Params) {
     },
   }
 
-  const packageDef = await parsePackage({ cwd, state });
+  const workspaceDef = await parseWorkspace({ cwd, state });
   const {
-    plugins,
     files: sourceFiles,
-  } = packageDef;
+  } = workspaceDef;
+  
+  const flatPackages = [workspaceDef, ...workspaceDef.packages];
+  for (const packageDef of flatPackages) {
+    for (const createPlugin of pluginsRegistry) {
+      const plugin = await createPlugin({ packageDef, state });
+      if (plugin === undefined) {
+        continue;
+      }
+      plugins.push(plugin);
+    }
+  }
 
-  await walkFiles(packageDef, state);
+  await walkFiles(workspaceDef, state);
 
   const unusedFiles = Object.keys(sourceFiles).filter((path: keyof typeof sourceFiles) => {
     return usedFiles[path] === undefined;

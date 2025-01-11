@@ -10,7 +10,6 @@ async function mockImport(path: string) {
   });
 }
 
-
 describe('analyze', () => {
   describe('unused ts file', () => {
     it('should report unused file', async () => {
@@ -133,6 +132,56 @@ describe('analyze', () => {
             "name": "unused-typescript-file",
             "exports": {
               ".": "./index.js",
+            },
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {}
+          }),
+          '/test/index.js': '//used!',
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not error when exports is nested map', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "exports": {
+              ".": {
+                "default": "./index.js",
+              }
+            },
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {}
+          }),
+          '/test/index.js': '//used!',
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not error when exports is deeply nested map', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "exports": {
+              ".": {
+                "import": {
+                  "default": "./index.js",
+                }
+              }
             },
             "version": "0.0.1",
             "private": true,
@@ -493,6 +542,60 @@ describe('analyze', () => {
 
         const { unusedFiles } = await analyze({
           cwd: '/test'
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not mark jest.config.js files as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.ts",
+            "version": "0.0.1",
+            "devDependencies": {
+              "jest": "^29.7.0",
+            },
+            "private": true,
+            "dependencies": {}
+          }),
+          '/test/jest.config.js': '// used by jest'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not mark files from "testMatch" as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "main": "src/main.ts",
+            "version": "0.0.1",
+            "devDependencies": {
+              "jest": "^29.7.0",
+            },
+            "private": true,
+            "dependencies": {}
+          }),
+          '/test/jest.config.js': `
+            module.exports = ${
+              JSON.stringify({
+                testMatch: ['<rootDir>/**/*.test.ts', '<rootDir>/**/*.test.tsx'],
+              })
+            }
+          `,
+          '/test/foo.test.tsx': '// used',
+          '/test/foo.test.ts': '// used'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
         });
 
         expect(unusedFiles).toEqual([]);
@@ -1063,6 +1166,74 @@ import Foo from '@/components/Foo'
       });
 
       expect(unusedFiles).toEqual([]);
+    });
+  });
+
+  describe('monorepo', () => {
+    describe('package.json workspaces', () => {
+      it('should not mark child package entry as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {},
+            "workspaces": [
+              "packages/foo"
+            ],
+          }),
+          '/test/packages/foo/package.json': JSON.stringify({
+            "name": "child",
+            "version": "0.0.1",
+            "private": true,
+            "main": "index.js",
+            "dependencies": {},
+          }),
+          '/test/packages/foo/index.js': '// main file for package'
+        });
+  
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+  
+          import: mockImport,
+        });
+  
+        expect(unusedFiles).toEqual([]);
+      });
+    });
+
+    describe('hoisted dependencies', () => {
+      it('should not report used config file from hoisted dependency as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "private": true,
+            "dependencies": {
+              "jest": "0.0.0"
+            },
+            "workspaces": [
+              "packages/foo"
+            ],
+          }),
+          '/test/packages/foo/package.json': JSON.stringify({
+            "name": "child",
+            "version": "0.0.1",
+            "private": true,
+            "main": "index.js",
+            "dependencies": {},
+          }),
+          '/test/packages/foo/jest.config.js': '// main file for package'
+        });
+  
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+  
+          import: mockImport,
+        });
+  
+        expect(unusedFiles).toEqual([]);
+      })
     });
   });
 
