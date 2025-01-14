@@ -13,6 +13,7 @@ import { plugin as prettierPlugin } from './plugins/prettier.js';
 import { plugin as tailwindPlugin } from './plugins/tailwind.js';
 import { plugin as jsConfigPlugin } from './plugins/jsconfig.js';
 import { plugin as postcssPlugin } from './plugins/postcss.js';
+import { plugin as rollupPlugin } from './plugins/rollup.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 import { type PackageDefinition, readPackageJson, type WorkspaceDefinition } from './package.js';
 import type { Plugin, PathResolver } from './plugin.js';
@@ -29,6 +30,7 @@ const pluginsRegistry = [
   postcssPlugin,
   eslintPlugin,
   bntPlugin,
+  rollupPlugin,
 ] as const satisfies Plugin[];
 
 type Params = {

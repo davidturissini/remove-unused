@@ -70,3 +70,17 @@ export function packageOrWorkspaceHasDependency(def: PackageDefinition, name: st
   return packageOrWorkspaceHasDependency(parentWorkspace, name);
 
 }
+
+export function eachScript({ packageJson }: PackageDefinition, cb: (data: { name: string, command: string }) => void) {
+  const { scripts } = packageJson;
+  if (scripts === undefined) {
+    return;
+  }
+
+  Object.keys(scripts).forEach((scriptName) => {
+    cb({
+      name: scriptName,
+      command: scripts[scriptName]
+    })
+  });
+}

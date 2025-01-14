@@ -1145,6 +1145,32 @@ import Foo from '@/components/Foo'
         expect(unusedFiles).toEqual([]);
       });
     });
+
+    describe('rollup', () => {
+      it('should not mark referenced config file as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "rollup": "0.0.0"
+            },
+            "scripts": {
+              "foo": "rollup -c rollup.used.config.ts"
+            },
+            "private": true
+          }),
+          '/test/rollup.used.config.ts': '// test file'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+    })
   });
 
   describe('node_modules', () => {
