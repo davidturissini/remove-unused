@@ -3,6 +3,7 @@ import { join as pathJoin, extname, dirname } from 'node:path';
 import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration, ExportDeclaration, ExportNamedDeclaration } from '@swc/core';
 import { remark } from 'remark'
 import remarkMdx from 'remark-mdx'
+import { tsImport } from 'tsx/esm/api';
 import { globSync } from 'glob';
 import { plugin as bntPlugin } from './plugins/bnt.js';
 import { plugin as eslintPlugin } from './plugins/eslint.js';
@@ -15,11 +16,13 @@ import { plugin as jsConfigPlugin } from './plugins/jsconfig.js';
 import { plugin as postcssPlugin } from './plugins/postcss.js';
 import { plugin as rollupPlugin } from './plugins/rollup.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
+import { plugin as vitestPlugin } from './plugins/vitest.js';
 import { type PackageDefinition, readPackageJson, type WorkspaceDefinition } from './package.js';
 import type { Plugin, PathResolver } from './plugin.js';
 
 
 const pluginsRegistry = [
+  vitestPlugin,
   jestPlugin,
   packageJsonScriptsPlugin,
   nextPlugin,
@@ -214,6 +217,7 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
       },
       importStatement: (importStatement) => {
         if (importStatement.source.type === 'StringLiteral') {
+          
           const resolved = state.resolvePath(importStatement.source.value);
           if (resolved === undefined) {
             const resolvedFilePath = resolveImportPath(dirname(sourceFilePath), importStatement.source.value);
@@ -377,6 +381,12 @@ export async function analyze({ cwd, import: importParam }: Params) {
     async import(path) {
       if (importParam !== undefined) {
         return await importParam(path);
+      }
+
+      const extName = extname(path);
+      if (extName === '.ts') {
+        const imported =  await tsImport(path, './');
+        return imported;
       }
 
       return await import(path);

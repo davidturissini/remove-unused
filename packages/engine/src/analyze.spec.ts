@@ -466,6 +466,32 @@ describe('analyze', () => {
 
       expect(unusedFiles).toEqual([]);
     });
+
+    it('should not mark ts imports without extension as unused', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          "name": "unused-typescript-file",
+          "version": "0.0.1",
+          "private": true,
+          "exports": {
+            "default": {
+              ".": "src/main.ts"
+            }
+          }
+        }),
+        '/test/src/main.ts': `
+          import { foo } from './tsfile';
+        `,
+        '/test/src/tsfile.ts': '//used'
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test',
+        import: mockImport
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
   });
 
   describe('export statements', () => {
@@ -1170,7 +1196,89 @@ import Foo from '@/components/Foo'
 
         expect(unusedFiles).toEqual([]);
       });
-    })
+    });
+
+    describe('vitest', () => {
+      it('should not mark *.test.ts files as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "vitest": "0.0.0"
+            },
+            "private": true
+          }),
+          '/test/src/used.test.ts': '// test file'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not mark vite.config.ts as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "vitest": "0.0.0"
+            },
+            "private": true
+          }),
+          '/test/vite.config.ts': '// test file'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+
+      it('should not mark vitest setup file as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            "name": "unused-typescript-file",
+            "version": "0.0.1",
+            "dependencies": {
+              "vitest": "0.0.0"
+            },
+            "private": true
+          }),
+          '/test/vite.config.ts': `
+            export default {
+              test: {
+                setupFiles: ['./vitest.setup.ts']
+              }
+            }
+          `,
+          '/test/vitest.setup.ts': '// used'
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: async () => {
+            return {
+              default: {
+                default: {
+                  test: {
+                    setupFiles: ['./vitest.setup.ts']
+                  }
+                }
+              }
+            }
+          },
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
+    });
   });
 
   describe('node_modules', () => {

@@ -33,9 +33,7 @@ export async function main() {
         const results = await analyze({
           cwd,
         });
-        process.stdout.write(JSON.stringify(results.unusedFiles.filter((file) => {
-          return /react/.test(file);
-        }), null, 2));
+        process.stdout.write(JSON.stringify(results.unusedFiles, null, 2));
       })
     .help().argv;
 }
