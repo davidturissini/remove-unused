@@ -28,7 +28,6 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
 
     const config = await state.import(configFile);
     const parsedConfig = viteConfigModuleSchema.safeParse(config);
-    console.log('config', config)
     if (parsedConfig.success === true) {
       const setupFiles = parsedConfig.data.default.default?.test?.setupFiles || [];
       setupFiles.forEach((path) => {
