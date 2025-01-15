@@ -66,8 +66,7 @@ jobs:
         run: |
           git config --global user.name 'David Turissini'
           git config --global user.email 'davidturissini@users.noreply.github.com'
-          pnpx nx release --specifier patch --skip-publish
-          git status
+          pnpx nx release --dry-run --specifier patch --skip-publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
