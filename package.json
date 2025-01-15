@@ -4,6 +4,7 @@
   "private": true,
   "devDependencies": {
     "nx": "20.3.0",
+    "eslint": "9.18.0",
     "@nx/devkit": "20.3.0",
     "typescript": "5.7.2",
     "@nx/js": "20.3.1",
