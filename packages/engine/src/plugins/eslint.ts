@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { createPlugin } from '../plugin.js';
 import { join as pathJoin } from 'node:path';
-import type { State } from '../analyze.js';
 import { packageHasDependency } from '../package.js';
 
 export const plugin = createPlugin(({ packageDef, state }) => {

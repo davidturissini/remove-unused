@@ -1,5 +1,4 @@
 import { join as pathJoin } from 'node:path';
-import type { State } from '../analyze.js';
 import { createPlugin } from '../plugin.js';
 
 export const plugin = createPlugin(({ state, packageDef }) => {

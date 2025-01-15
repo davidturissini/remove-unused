@@ -1,5 +1,4 @@
 import { join as pathJoin, extname } from 'node:path';
-import type { State } from '../analyze.js';
 import { existsSync } from 'node:fs';
 import { createPlugin } from '../plugin.js';
 import { PackageJsonSchema } from '../package.js';

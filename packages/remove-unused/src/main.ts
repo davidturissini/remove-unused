@@ -4,11 +4,12 @@ import { analyze } from '@remove-unused/engine';
 main();
 
 export async function main() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   yargs(process.argv.slice(2))
     .command(
       '$0 [cwd]',
       'Remove unused files from your project',
-      // @ts-expect-error
+      // @ts-expect-error For some reason, the yargs types doesn't like this even though its valid
       async (yargs) => {
         return yargs.positional('cwd', {
           describe: 'Directory to scan',
@@ -25,7 +26,7 @@ export async function main() {
     .command(
       'report [cwd]',
       'Report unused files',
-      // @ts-expect-error
+      // @ts-expect-error For some reason, the yargs types doesn't like this even though its valid
       async (yargs) => {
         return yargs.positional('cwd', {
           describe: 'Directory to scan',

@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join as pathJoin } from 'node:path';
 import { createPlugin } from '../plugin.js';
-import type { State } from '../analyze.js';
 import { z } from 'zod';
 import { createMatchPath } from 'tsconfig-paths';
 

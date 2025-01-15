@@ -7,7 +7,6 @@ import {
   type CallExpression,
   type Expression,
   type ImportDeclaration,
-  ExportDeclaration,
   ExportNamedDeclaration,
 } from '@swc/core';
 import { remark } from 'remark';
@@ -85,7 +84,6 @@ function parsePackage({
 
 async function parseWorkspace({
   cwd,
-  state,
 }: {
   cwd: string;
   state: State;
@@ -408,7 +406,9 @@ async function walkFiles(
           state.addRef(path.replace('.js', '.d.ts'));
         }
       });
-    } catch {}
+    } catch {
+      // noop
+    }
   });
 }
 

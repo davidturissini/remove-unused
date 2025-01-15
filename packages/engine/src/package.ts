@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join as pathJoin } from 'node:path';
 import { z } from 'zod';
-import { Plugin } from './plugin.js';
 
 export type FileDef = {
   type: 'ecmascript' | 'mdx';
