@@ -100,7 +100,7 @@ importers:
   packages/remove-unused:
     dependencies:
       '@remove-unused/engine':
-        specifier: 0.0.9-2
+        specifier: 0.0.9-3
         version: link:../engine
       yargs:
         specifier: 17.7.2
