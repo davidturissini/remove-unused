@@ -18,7 +18,32 @@ jobs:
           pnpm i
       - name: Lint and Test
         run: |
-          pnpx nx run-many --target lint,test --verbose
+          pnpx nx run-many --target lint,test
       - name: Formatting
         run: |
           pnpx nx format:check --all
+  build-and-deploy-dot-com:
+    runs-on: ubuntu-latest
+    needs:
+      - static
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Install Dependencies
+        run: |
+          pnpm i
+      - name: Build
+        run: |
+          pnpx nx build @remove-unused/dotcom
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          environment: production
+          command: pages deploy packages/dotcom/dist --project-name=remove-unused-dot-dom
+
+
