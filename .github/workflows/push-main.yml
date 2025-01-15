@@ -69,7 +69,7 @@ jobs:
         run: |
           git config --global user.name 'David Turissini'
           git config --global user.email 'davidturissini@users.noreply.github.com'
-          pnpx nx release --specifier prepatch
+          pnpx nx release --specifier prerelease --yes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
