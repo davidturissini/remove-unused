@@ -3,21 +3,16 @@ import { join as pathJoin } from 'node:path';
 import type { State } from '../analyze.js';
 import { globSync } from 'glob';
 import { existsSync } from 'node:fs';
-import { type PackageDefinition, packageOrWorkspaceHasDependency } from '../package.js';
+import {
+  type PackageDefinition,
+  packageOrWorkspaceHasDependency,
+} from '../package.js';
 import { createPlugin } from '../plugin.js';
 
-
-
 const jestConfigSchema = z.object({
-  setupFilesAfterEnv: z.array(
-    z.string(),
-  ).optional(),
-  testMatch: z.array(
-    z.string()
-  ).optional(),
+  setupFilesAfterEnv: z.array(z.string()).optional(),
+  testMatch: z.array(z.string()).optional(),
 });
-
-type JestConfig = z.infer<typeof jestConfigSchema>;
 
 const packageJsonJestSchema = z.object({
   jest: jestConfigSchema.optional(),
@@ -25,18 +20,18 @@ const packageJsonJestSchema = z.object({
 
 const jestSchemaImported = z.object({
   default: jestConfigSchema,
-})
+});
 
-async function loadConfig({ packageJson, cwd }: PackageDefinition, state: State) {
+async function loadConfig(
+  { packageJson, cwd }: PackageDefinition,
+  state: State,
+) {
   const parsed = packageJsonJestSchema.parse(packageJson);
   if (parsed.jest !== undefined) {
     return parsed.jest;
   }
 
-  const configFile = pathJoin(
-    cwd,
-    'jest.config.js'
-  );
+  const configFile = pathJoin(cwd, 'jest.config.js');
 
   if (existsSync(configFile) === false) {
     return;
@@ -47,11 +42,9 @@ async function loadConfig({ packageJson, cwd }: PackageDefinition, state: State)
   if (parsedImportedConfig.success === false) {
     return;
   }
-  
+
   return parsedImportedConfig.data.default;
-
 }
-
 
 export const plugin = createPlugin(async ({ state, packageDef }) => {
   if (packageOrWorkspaceHasDependency(packageDef, 'jest') === false) {
@@ -64,34 +57,31 @@ export const plugin = createPlugin(async ({ state, packageDef }) => {
   config?.setupFilesAfterEnv?.forEach((path) => {
     const absolute = path.replace('<rootDir>', cwd);
     state.addRef(absolute);
-  })
-  
+  });
+
   const configPath = pathJoin(cwd, 'jest.config.js');
   if (existsSync(configPath)) {
     state.addRef(configPath);
   }
-  const allFiles = config?.testMatch?.reduce((acc, match) => {
-    const expanded = match.replace('<rootDir>', cwd);
-    const files = globSync(expanded, {
-      ignore: '**/node_modules/**'
-    })
-    
-    return [
-      ...acc,
-      ...files,
-    ]
-  }, [] as string[]) || [];
-  
+  const allFiles =
+    config?.testMatch?.reduce((acc, match) => {
+      const expanded = match.replace('<rootDir>', cwd);
+      const files = globSync(expanded, {
+        ignore: '**/node_modules/**',
+      });
+
+      return [...acc, ...files];
+    }, [] as string[]) || [];
+
   return {
-      name: 'jest',
-      fileBelongsTo: function fileBelongsTo(path: string) {
-        if (config?.testMatch === undefined) {
-          const fileMatch = new RegExp('.test.js');
-          return fileMatch.test(path);
-        }
-          
-        return allFiles.includes(path);
-        
-      },
-  }
+    name: 'jest',
+    fileBelongsTo: function fileBelongsTo(path: string) {
+      if (config?.testMatch === undefined) {
+        const fileMatch = new RegExp('.test.js');
+        return fileMatch.test(path);
+      }
+
+      return allFiles.includes(path);
+    },
+  };
 });

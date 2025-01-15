@@ -5,38 +5,41 @@ import { z } from 'zod';
 import { createPlugin } from '../plugin.js';
 
 const postCssConfigSchema = z.object({
-  default: z.object({
-    plugins: z.object({
-      tailwindcss: z.object({
-        config: z.string()
-      }).optional(),
-    }).optional()
-  }).optional(),
+  default: z
+    .object({
+      plugins: z
+        .object({
+          tailwindcss: z
+            .object({
+              config: z.string(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 const nextJsConfigSchema = z.object({
-  pageExtensions: z.array(z.string()).default(['jsx', 'js', 'tsx', 'ts'])
+  pageExtensions: z.array(z.string()).default(['jsx', 'js', 'tsx', 'ts']),
 });
 
 const nextJsConfigSchemaImported = z.object({
   default: nextJsConfigSchema.optional(),
 });
 
-const CONFIG_FILE_NAMES = [
-  'next.config.js',
-  'next.config.mjs'
-]
+const CONFIG_FILE_NAMES = ['next.config.js', 'next.config.mjs'];
 
 async function importNextJsConfig(absPath: string, state: State) {
   const value = await state.import(absPath);
   if (value === undefined) {
     return;
   }
-  return nextJsConfigSchemaImported.parse(value).default
+  return nextJsConfigSchemaImported.parse(value).default;
 }
 
 async function loadConfig(cwd: string, state: State) {
-  for(const fileName of CONFIG_FILE_NAMES) {
+  for (const fileName of CONFIG_FILE_NAMES) {
     const absPath = pathJoin(cwd, fileName);
     if (existsSync(absPath)) {
       state.addRef(absPath);
@@ -46,9 +49,9 @@ async function loadConfig(cwd: string, state: State) {
         continue;
       }
       return {
-        fileName: absPath, 
+        fileName: absPath,
         config: parsed.data,
-      }
+      };
     }
   }
 }
@@ -59,11 +62,13 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
   if (dependencies?.next === undefined && devDependencies?.next === undefined) {
     return undefined;
   }
-  
+
   const { scripts: packageJsonScripts } = packageJson;
 
   if (packageJsonScripts === undefined) {
-    console.warn(`Next is listed as dependency but no scripts are defined! cwd: ${cwd}`);
+    console.warn(
+      `Next is listed as dependency but no scripts are defined! cwd: ${cwd}`,
+    );
     return;
   }
 
@@ -74,7 +79,9 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
   });
 
   if (nextJsScript === undefined) {
-    console.warn(`Next is listeed as dependency but no Next scripts are defined! cwd: ${cwd}`);
+    console.warn(
+      `Next is listeed as dependency but no Next scripts are defined! cwd: ${cwd}`,
+    );
     return;
   }
 
@@ -82,7 +89,10 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
   const localNextDir = nextJsScript.split(' ')[2] ?? 'src';
 
   const absoluteDir = pathJoin(cwd, localNextDir);
-  const config = await loadConfig(hasConfiguredLocalDir === true ? absoluteDir : cwd, state);
+  const config = await loadConfig(
+    hasConfiguredLocalDir === true ? absoluteDir : cwd,
+    state,
+  );
   if (config) {
     state.addRef(config.fileName);
   }
@@ -93,7 +103,10 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
     state.addRef(postCssConfigPath);
     const postCssConfig = await state.import(postCssConfigPath);
     const parsed = postCssConfigSchema.safeParse(postCssConfig);
-    if (parsed.success === true && parsed?.data?.default?.plugins?.tailwindcss?.config !== undefined) {
+    if (
+      parsed.success === true &&
+      parsed?.data?.default?.plugins?.tailwindcss?.config !== undefined
+    ) {
       state.addRef(parsed.data.default.plugins.tailwindcss.config);
     }
   }
@@ -101,9 +114,7 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
   return {
     name: 'next',
     fileBelongsTo(path) {
-      const inPagesDir = path.startsWith(
-        pathJoin(absoluteDir, 'pages')
-      );
+      const inPagesDir = path.startsWith(pathJoin(absoluteDir, 'pages'));
 
       if (inPagesDir === false) {
         return false;
@@ -111,7 +122,6 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
 
       const extension = extname(path).replace('.', '');
       return config?.config.pageExtensions.includes(extension) === true;
-    }
-  }
-
+    },
+  };
 });

@@ -10,6 +10,6 @@ export const plugin = createPlugin(({ packageDef }) => {
     name: 'better-node-test',
     fileBelongsTo(path) {
       return /\.test\.(js|ts)/.test(path);
-    }
-  }
-})
+    },
+  };
+});

@@ -15,15 +15,10 @@ const jsConfigSchema = z.object({
       baseUrl: z.never(),
       paths: z.never(),
     }),
-  ])
+  ]),
 });
 
-const EXTENSIONS = [
-  '.jsx',
-  '.js',
-  '.ts',
-  '.tsx'
-]
+const EXTENSIONS = ['.jsx', '.js', '.ts', '.tsx'];
 
 export const plugin = createPlugin(({ packageDef }) => {
   const { cwd } = packageDef;
@@ -32,9 +27,11 @@ export const plugin = createPlugin(({ packageDef }) => {
     return;
   }
 
-  const jsConfig = jsConfigSchema.parse(JSON.parse(readFileSync(jsConfigFilePath).toString()));
+  const jsConfig = jsConfigSchema.parse(
+    JSON.parse(readFileSync(jsConfigFilePath).toString()),
+  );
   const paths = jsConfig.compilerOptions?.paths;
-  
+
   if (paths === undefined) {
     return;
   }
@@ -45,25 +42,30 @@ export const plugin = createPlugin(({ packageDef }) => {
   return {
     name: 'jsconfig',
     resolver: (importPath) => {
-      const resolved = matchPathFn(importPath, undefined, undefined, EXTENSIONS);
+      const resolved = matchPathFn(
+        importPath,
+        undefined,
+        undefined,
+        EXTENSIONS,
+      );
 
       if (resolved === undefined) {
         return undefined;
       }
 
-      for(const ext of EXTENSIONS) {
+      for (const ext of EXTENSIONS) {
         const path = `${resolved}${ext}`;
         if (existsSync(path) === true) {
           return path;
         }
-        
+
         const withIndex = pathJoin(resolved, `index${ext}`);
         if (existsSync(withIndex) === true) {
           return withIndex;
         }
       }
-  
+
       return undefined;
-    }
-  }
-})
+    },
+  };
+});

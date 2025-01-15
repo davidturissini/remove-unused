@@ -5,16 +5,18 @@ import { createPlugin } from '../plugin.js';
 import { packageOrWorkspaceHasDependency } from '../package.js';
 
 const viteConfigSchema = z.object({
-  test: z.object({
-    setupFiles: z.array(z.string()).optional(),
-  }).optional()
+  test: z
+    .object({
+      setupFiles: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 const viteConfigModuleSchema = z.object({
   default: z.object({
-    default: viteConfigSchema.optional()
-  })
-})
+    default: viteConfigSchema.optional(),
+  }),
+});
 
 export const plugin = createPlugin(async ({ packageDef, state }) => {
   if (packageOrWorkspaceHasDependency(packageDef, 'vitest') === false) {
@@ -29,20 +31,19 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
     const config = await state.import(configFile);
     const parsedConfig = viteConfigModuleSchema.safeParse(config);
     if (parsedConfig.success === true) {
-      const setupFiles = parsedConfig.data.default.default?.test?.setupFiles || [];
+      const setupFiles =
+        parsedConfig.data.default.default?.test?.setupFiles || [];
       setupFiles.forEach((path) => {
         const fullPath = pathJoin(cwd, path);
         state.addRef(fullPath);
-      })
+      });
     }
   }
-  
 
   return {
     name: 'vitest',
     fileBelongsTo(path) {
       return new RegExp('test.ts').test(path);
     },
-  }
-
-})
+  };
+});

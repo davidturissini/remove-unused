@@ -12,6 +12,6 @@ export const plugin = createPlugin(({ packageDef, state }) => {
   const configFile = 'eslint.config.js';
   const fullPath = pathJoin(packageDef.cwd, configFile);
   if (existsSync(fullPath) === true) {
-    state.addRef(fullPath)
-  };
-})
+    state.addRef(fullPath);
+  }
+});

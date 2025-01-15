@@ -27,6 +27,5 @@ export const plugin = createPlugin(({ state, packageDef }) => {
     const { cwd } = packageDef;
     const fullPath = pathJoin(cwd, config);
     state.addRef(fullPath);
-
-  })
+  });
 });

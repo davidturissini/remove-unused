@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 async function mockImport(path: string) {
   const contents = readFileSync(path).toString();
   return Promise.resolve({
-    default: eval(contents)
+    default: eval(contents),
   });
 }
 
@@ -15,12 +15,12 @@ describe('analyze', () => {
     it('should report unused file', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {}
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
         }),
-        '/test/src/unused.ts': '//unused'
+        '/test/src/unused.ts': '//unused',
       });
 
       const { unusedFiles } = await analyze({
@@ -28,9 +28,7 @@ describe('analyze', () => {
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([
-        '/test/src/unused.ts'
-      ]);
+      expect(unusedFiles).toEqual(['/test/src/unused.ts']);
     });
 
     describe('unused ts file in node_modules', () => {
@@ -38,11 +36,11 @@ describe('analyze', () => {
         mock({
           '/test/node_modules/package/foo.ts': '// in node modules',
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {}
-          })
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
+          }),
         });
 
         const { unusedFiles } = await analyze({
@@ -59,12 +57,12 @@ describe('analyze', () => {
     it('should report unused file', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {}
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
         }),
-        '/test/src/unused.js': '//unused'
+        '/test/src/unused.js': '//unused',
       });
 
       const { unusedFiles } = await analyze({
@@ -72,9 +70,7 @@ describe('analyze', () => {
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([
-        '/test/src/unused.js'
-      ]);
+      expect(unusedFiles).toEqual(['/test/src/unused.js']);
     });
   });
 
@@ -83,13 +79,13 @@ describe('analyze', () => {
       it('should not report as unused file', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {}
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
           }),
-          '/test/src/main.ts': '//used!'
+          '/test/src/main.ts': '//used!',
         });
 
         const { unusedFiles } = await analyze({
@@ -105,15 +101,15 @@ describe('analyze', () => {
       it('should not report as unused file', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "types": "src/types.ts",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {}
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            types: 'src/types.ts',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
           }),
           '/test/src/main.ts': '//used!',
-          '/test/src/types.ts': '//used!'
+          '/test/src/types.ts': '//used!',
         });
 
         const { unusedFiles } = await analyze({
@@ -129,13 +125,13 @@ describe('analyze', () => {
       it('should not mark files in exports as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "exports": {
-              ".": "./index.js",
+            name: 'unused-typescript-file',
+            exports: {
+              '.': './index.js',
             },
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {}
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
           }),
           '/test/index.js': '//used!',
         });
@@ -151,15 +147,15 @@ describe('analyze', () => {
       it('should not error when exports is nested map', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "exports": {
-              ".": {
-                "default": "./index.js",
-              }
+            name: 'unused-typescript-file',
+            exports: {
+              '.': {
+                default: './index.js',
+              },
             },
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {}
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
           }),
           '/test/index.js': '//used!',
         });
@@ -175,17 +171,17 @@ describe('analyze', () => {
       it('should not error when exports is deeply nested map', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "exports": {
-              ".": {
-                "import": {
-                  "default": "./index.js",
-                }
-              }
+            name: 'unused-typescript-file',
+            exports: {
+              '.': {
+                import: {
+                  default: './index.js',
+                },
+              },
             },
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {}
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
           }),
           '/test/index.js': '//used!',
         });
@@ -205,14 +201,14 @@ describe('analyze', () => {
       it('should not report as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {}
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
           }),
           '/test/src/main.ts': 'require("./utils")',
-          '/test/src/utils.js': '//used!'
+          '/test/src/utils.js': '//used!',
         });
 
         const { unusedFiles } = await analyze({
@@ -229,14 +225,14 @@ describe('analyze', () => {
     it('should not report as unused', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "main": "src/main.ts",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {}
+          name: 'unused-typescript-file',
+          main: 'src/main.ts',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
         }),
         '/test/src/main.ts': 'const foo = require("./utils")',
-        '/test/src/utils.js': '//used!'
+        '/test/src/utils.js': '//used!',
       });
 
       const { unusedFiles } = await analyze({
@@ -252,17 +248,17 @@ describe('analyze', () => {
     it('should mark resolved imports as used', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "main": "src/index.ts",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {}
+          name: 'unused-typescript-file',
+          main: 'src/index.ts',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
         }),
         '/test/src/index.ts': `
           import { foo } from 'somelibrary';
           import { bar } from './used';
         `,
-        '/test/src/used.ts': '//unused'
+        '/test/src/used.ts': '//unused',
       });
 
       const { unusedFiles } = await analyze({
@@ -279,13 +275,13 @@ describe('analyze', () => {
       it('should not mark entry d.ts file as unused if tsconfig is present', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.js",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {},
-            "scripts": {
-              "dev": "next dev demo"
+            name: 'unused-typescript-file',
+            main: 'src/main.js',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
+            scripts: {
+              dev: 'next dev demo',
             },
           }),
           'tsconfig.json': {},
@@ -296,25 +292,25 @@ describe('analyze', () => {
             // d ts file
           `,
         });
-  
+
         const { unusedFiles } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
-  
+
         expect(unusedFiles).toEqual([]);
       });
 
       it('should not mark imported d.ts file as unused if tsconfig is present', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.js",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {},
-            "scripts": {
-              "dev": "next dev demo"
+            name: 'unused-typescript-file',
+            main: 'src/main.js',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
+            scripts: {
+              dev: 'next dev demo',
             },
           }),
           'tsconfig.json': {},
@@ -326,12 +322,12 @@ describe('analyze', () => {
             // d ts file
           `,
         });
-  
+
         const { unusedFiles } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
-  
+
         expect(unusedFiles).toEqual([]);
       });
     });
@@ -341,19 +337,19 @@ describe('analyze', () => {
     it('should not mark index.js files as unused', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "main": "src/main.ts",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {},
-          "scripts": {
-            "dev": "next dev demo"
+          name: 'unused-typescript-file',
+          main: 'src/main.ts',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
+          scripts: {
+            dev: 'next dev demo',
           },
         }),
         '/test/src/main.ts': `
           import { foo } from './folder';
         `,
-        '/test/src/folder/index.ts': `// used`
+        '/test/src/folder/index.ts': `// used`,
       });
 
       const { unusedFiles } = await analyze({
@@ -367,15 +363,15 @@ describe('analyze', () => {
     it('should not mark aliased imports that have index.js files as unused', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {},
-          "devDependencies": {
-            "next": "1.2.2"
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
+          devDependencies: {
+            next: '1.2.2',
           },
-          "scripts": {
-            "dev": "next dev"
+          scripts: {
+            dev: 'next dev',
           },
         }),
         '/test/jsconfig.json': `
@@ -394,7 +390,7 @@ describe('analyze', () => {
         '/test/src/components/Foo/index.ts': '// referenced via path alias',
         '/test/src/pages/Foo.tsx': `
             import Foo from '@/components/Foo'
-        `
+        `,
       });
 
       const { unusedFiles } = await analyze({
@@ -408,20 +404,20 @@ describe('analyze', () => {
     it('should mark imports from config as used', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "version": "0.0.1",
-          "private": true,
-          "scripts": {
-            "dev": "next dev"
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          scripts: {
+            dev: 'next dev',
           },
-          "dependencies": {
-            next: '1.2.3'
-          }
+          dependencies: {
+            next: '1.2.3',
+          },
         }),
         '/test/next.config.mjs': `
           import { foo } from './file.mjs';
         `,
-        '/test/file.mjs': '//used'
+        '/test/file.mjs': '//used',
       });
 
       const { unusedFiles } = await analyze({
@@ -429,8 +425,8 @@ describe('analyze', () => {
         import: async () => {
           return {
             default: {},
-          }
-        }
+          };
+        },
       });
 
       expect(unusedFiles).toEqual([]);
@@ -439,20 +435,20 @@ describe('analyze', () => {
     it('ignore ? from import statements', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "version": "0.0.1",
-          "private": true,
-          "scripts": {
-            "dev": "next dev"
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          scripts: {
+            dev: 'next dev',
           },
-          "dependencies": {
-            next: '1.2.3'
-          }
+          dependencies: {
+            next: '1.2.3',
+          },
         }),
         '/test/next.config.mjs': `
           import { foo } from './file.mjs?foo';
         `,
-        '/test/file.mjs': '//used'
+        '/test/file.mjs': '//used',
       });
 
       const { unusedFiles } = await analyze({
@@ -460,8 +456,8 @@ describe('analyze', () => {
         import: async () => {
           return {
             default: {},
-          }
-        }
+          };
+        },
       });
 
       expect(unusedFiles).toEqual([]);
@@ -470,24 +466,24 @@ describe('analyze', () => {
     it('should not mark ts imports without extension as unused', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "version": "0.0.1",
-          "private": true,
-          "exports": {
-            "default": {
-              ".": "src/main.ts"
-            }
-          }
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          exports: {
+            default: {
+              '.': 'src/main.ts',
+            },
+          },
         }),
         '/test/src/main.ts': `
           import { foo } from './tsfile';
         `,
-        '/test/src/tsfile.ts': '//used'
+        '/test/src/tsfile.ts': '//used',
       });
 
       const { unusedFiles } = await analyze({
         cwd: '/test',
-        import: mockImport
+        import: mockImport,
       });
 
       expect(unusedFiles).toEqual([]);
@@ -498,19 +494,19 @@ describe('analyze', () => {
     it('should not mark files referenced in export statements as unused', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "main": "src/main.ts",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {},
-          "scripts": {
-            "dev": "next dev demo"
+          name: 'unused-typescript-file',
+          main: 'src/main.ts',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
+          scripts: {
+            dev: 'next dev demo',
           },
         }),
         '/test/src/main.ts': `
           export { foo } from './file.ts';
         `,
-        '/test/src/file.ts': `// used`
+        '/test/src/file.ts': `// used`,
       });
 
       const { unusedFiles } = await analyze({
@@ -519,7 +515,7 @@ describe('analyze', () => {
       });
 
       expect(unusedFiles).toEqual([]);
-    })
+    });
   });
 
   describe('Plugins', () => {
@@ -527,20 +523,20 @@ describe('analyze', () => {
       it('should not mark .test.js files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "devDependencies": {
-              "jest": "^29.7.0",
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            devDependencies: {
+              jest: '^29.7.0',
             },
-            "private": true,
-            "dependencies": {}
+            private: true,
+            dependencies: {},
           }),
-          '/test/src/used.test.js': '// used by jest'
+          '/test/src/used.test.js': '// used by jest',
         });
 
         const { unusedFiles } = await analyze({
-          cwd: '/test'
+          cwd: '/test',
         });
 
         expect(unusedFiles).toEqual([]);
@@ -549,25 +545,23 @@ describe('analyze', () => {
       it('should not mark "setupFilesAfterEnv" files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "devDependencies": {
-              "jest": "^29.7.0",
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            devDependencies: {
+              jest: '^29.7.0',
             },
-            "private": true,
-            "dependencies": {},
-            "jest": {
-              "setupFilesAfterEnv": [
-                "<rootDir>/jest/customMatchers.js"
-              ]
-            }
+            private: true,
+            dependencies: {},
+            jest: {
+              setupFilesAfterEnv: ['<rootDir>/jest/customMatchers.js'],
+            },
           }),
-          '/test/jest/customMatchers.js': '// used by jest'
+          '/test/jest/customMatchers.js': '// used by jest',
         });
 
         const { unusedFiles } = await analyze({
-          cwd: '/test'
+          cwd: '/test',
         });
 
         expect(unusedFiles).toEqual([]);
@@ -576,16 +570,16 @@ describe('analyze', () => {
       it('should not mark jest.config.js files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "devDependencies": {
-              "jest": "^29.7.0",
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            devDependencies: {
+              jest: '^29.7.0',
             },
-            "private": true,
-            "dependencies": {}
+            private: true,
+            dependencies: {},
           }),
-          '/test/jest.config.js': '// used by jest'
+          '/test/jest.config.js': '// used by jest',
         });
 
         const { unusedFiles } = await analyze({
@@ -599,24 +593,22 @@ describe('analyze', () => {
       it('should not mark files from "testMatch" as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "devDependencies": {
-              "jest": "^29.7.0",
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            devDependencies: {
+              jest: '^29.7.0',
             },
-            "private": true,
-            "dependencies": {}
+            private: true,
+            dependencies: {},
           }),
           '/test/jest.config.js': `
-            module.exports = ${
-              JSON.stringify({
-                testMatch: ['<rootDir>/**/*.test.ts', '<rootDir>/**/*.test.tsx'],
-              })
-            }
+            module.exports = ${JSON.stringify({
+              testMatch: ['<rootDir>/**/*.test.ts', '<rootDir>/**/*.test.tsx'],
+            })}
           `,
           '/test/foo.test.tsx': '// used',
-          '/test/foo.test.ts': '// used'
+          '/test/foo.test.ts': '// used',
         });
 
         const { unusedFiles } = await analyze({
@@ -632,16 +624,16 @@ describe('analyze', () => {
       it('should not mark node script files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {},
-            "scripts": {
-              "used": "node ./scripts/used.js"
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
+            scripts: {
+              used: 'node ./scripts/used.js',
             },
           }),
-          '/test/scripts/used.js': '// used by jest'
+          '/test/scripts/used.js': '// used by jest',
         });
 
         const { unusedFiles } = await analyze({
@@ -658,16 +650,16 @@ describe('analyze', () => {
         it('should not mark node script files as unused', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "main": "src/main.ts",
-              "version": "0.0.1",
-              "private": true,
-              "dependencies": {},
-              "devDependencies": {
-                "next": "1.2.2"
+              name: 'unused-typescript-file',
+              main: 'src/main.ts',
+              version: '0.0.1',
+              private: true,
+              dependencies: {},
+              devDependencies: {
+                next: '1.2.2',
               },
-              "scripts": {
-                "dev": "next dev demo"
+              scripts: {
+                dev: 'next dev demo',
               },
             }),
             '/test/demo/next.config.js': 'module.exports = {}',
@@ -680,7 +672,7 @@ describe('analyze', () => {
                 },
               }
             `,
-            '/test/demo/pages/theme.js': '// used by next'
+            '/test/demo/pages/theme.js': '// used by next',
           });
 
           const { unusedFiles } = await analyze({
@@ -693,49 +685,52 @@ describe('analyze', () => {
       });
 
       describe('root dir', () => {
-        it.each(['next.config.js', 'next.config.mjs'])('should not mark %s as unused', async (configFileName) => {
-          mock({
-            '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "main": "src/main.ts",
-              "version": "0.0.1",
-              "private": true,
-              "dependencies": {},
-              "devDependencies": {
-                "next": "1.2.2"
-              },
-              "scripts": {
-                "dev": "next dev"
-              },
-            }),
-            [`/test/${configFileName}`]: '// used by next'
-          });
+        it.each(['next.config.js', 'next.config.mjs'])(
+          'should not mark %s as unused',
+          async (configFileName) => {
+            mock({
+              '/test/package.json': JSON.stringify({
+                name: 'unused-typescript-file',
+                main: 'src/main.ts',
+                version: '0.0.1',
+                private: true,
+                dependencies: {},
+                devDependencies: {
+                  next: '1.2.2',
+                },
+                scripts: {
+                  dev: 'next dev',
+                },
+              }),
+              [`/test/${configFileName}`]: '// used by next',
+            });
 
-          const { unusedFiles } = await analyze({
-            cwd: '/test',
-            import: mockImport,
-          });
+            const { unusedFiles } = await analyze({
+              cwd: '/test',
+              import: mockImport,
+            });
 
-          expect(unusedFiles).toEqual([]);
-        });
+            expect(unusedFiles).toEqual([]);
+          },
+        );
 
         describe('mjs config file', () => {
           it('should import the file', async () => {
             mock({
               '/test/package.json': JSON.stringify({
-                "name": "unused-typescript-file",
-                "main": "src/main.ts",
-                "version": "0.0.1",
-                "private": true,
-                "dependencies": {},
-                "devDependencies": {
-                  "next": "1.2.2"
+                name: 'unused-typescript-file',
+                main: 'src/main.ts',
+                version: '0.0.1',
+                private: true,
+                dependencies: {},
+                devDependencies: {
+                  next: '1.2.2',
                 },
-                "scripts": {
-                  "dev": "next dev"
+                scripts: {
+                  dev: 'next dev',
                 },
               }),
-              '/test/next.config.mjs': '// used by next'
+              '/test/next.config.mjs': '// used by next',
             });
 
             const importSpy = vi.fn();
@@ -746,8 +741,7 @@ describe('analyze', () => {
             });
 
             expect(importSpy).toHaveBeenCalledWith('/test/next.config.mjs');
-
-          })
+          });
         });
       });
 
@@ -755,16 +749,16 @@ describe('analyze', () => {
         it('should not mark MDX files in pages dir as unused', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "main": "src/main.ts",
-              "version": "0.0.1",
-              "private": true,
-              "dependencies": {},
-              "devDependencies": {
-                "next": "1.2.2"
+              name: 'unused-typescript-file',
+              main: 'src/main.ts',
+              version: '0.0.1',
+              private: true,
+              dependencies: {},
+              devDependencies: {
+                next: '1.2.2',
               },
-              "scripts": {
-                "dev": "next dev"
+              scripts: {
+                dev: 'next dev',
               },
             }),
             '/test/next.config.js': `
@@ -772,7 +766,7 @@ describe('analyze', () => {
                 pageExtensions: ['mdx'],
               }
             `,
-            '/test/src/pages/Foo.mdx': '// presumably used by next?'
+            '/test/src/pages/Foo.mdx': '// presumably used by next?',
           });
 
           const { unusedFiles } = await analyze({
@@ -787,16 +781,16 @@ describe('analyze', () => {
         it('should not mark MDX files in pages dir as unused when config is mjs', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "main": "src/main.ts",
-              "version": "0.0.1",
-              "private": true,
-              "dependencies": {},
-              "devDependencies": {
-                "next": "1.2.2"
+              name: 'unused-typescript-file',
+              main: 'src/main.ts',
+              version: '0.0.1',
+              private: true,
+              dependencies: {},
+              devDependencies: {
+                next: '1.2.2',
               },
-              "scripts": {
-                "dev": "next dev"
+              scripts: {
+                dev: 'next dev',
               },
             }),
             '/test/next.config.mjs': `
@@ -808,7 +802,7 @@ describe('analyze', () => {
 import Foo from '@/components/Foo'
 
 <Foo />
-            `
+            `,
           });
 
           const { unusedFiles } = await analyze({
@@ -818,36 +812,35 @@ import Foo from '@/components/Foo'
                 return {
                   default: {
                     pageExtensions: ['mdx'],
-                  }
-                }
+                  },
+                };
               }
               throw new Error('Unexpected import');
             },
           });
 
           expect(unusedFiles).toEqual([]);
-
-        })
+        });
 
         it('should mark files in pages dir as unused when pageExtensions does not contain mdx', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "main": "src/main.ts",
-              "version": "0.0.1",
-              "private": true,
-              "dependencies": {},
-              "devDependencies": {
-                "next": "1.2.2"
+              name: 'unused-typescript-file',
+              main: 'src/main.ts',
+              version: '0.0.1',
+              private: true,
+              dependencies: {},
+              devDependencies: {
+                next: '1.2.2',
               },
-              "scripts": {
-                "dev": "next dev"
+              scripts: {
+                dev: 'next dev',
               },
             }),
             '/test/next.config.js': `
               module.exports = {}
             `,
-            '/test/src/pages/Foo.mdx': '// presumably used by next?'
+            '/test/src/pages/Foo.mdx': '// presumably used by next?',
           });
 
           const { unusedFiles } = await analyze({
@@ -856,24 +849,22 @@ import Foo from '@/components/Foo'
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([
-            '/test/src/pages/Foo.mdx'
-          ]);
+          expect(unusedFiles).toEqual(['/test/src/pages/Foo.mdx']);
         });
 
         it('should not mark component imported in MDX file as unused', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "main": "src/main.ts",
-              "version": "0.0.1",
-              "private": true,
-              "dependencies": {},
-              "devDependencies": {
-                "next": "1.2.2"
+              name: 'unused-typescript-file',
+              main: 'src/main.ts',
+              version: '0.0.1',
+              private: true,
+              dependencies: {},
+              devDependencies: {
+                next: '1.2.2',
               },
-              "scripts": {
-                "dev": "next dev"
+              scripts: {
+                dev: 'next dev',
               },
             }),
             '/test/jsconfig.json': `
@@ -896,7 +887,7 @@ import Foo from '@/components/Foo'
 import Foo from '@/components/Foo'
 
 <Foo />
-            `
+            `,
           });
 
           const { unusedFiles } = await analyze({
@@ -913,20 +904,20 @@ import Foo from '@/components/Foo'
       it('should not mark tailwind.config.js files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "devDependencies": {
-              "tailwindcss": "^29.7.0",
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            devDependencies: {
+              tailwindcss: '^29.7.0',
             },
-            "private": true,
-            "dependencies": {}
+            private: true,
+            dependencies: {},
           }),
-          '/test/tailwind.config.js': '// used by jest'
+          '/test/tailwind.config.js': '// used by jest',
         });
 
         const { unusedFiles } = await analyze({
-          cwd: '/test'
+          cwd: '/test',
         });
 
         expect(unusedFiles).toEqual([]);
@@ -937,20 +928,20 @@ import Foo from '@/components/Foo'
       it('should not mark tailwind.config.js files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "main": "src/main.ts",
-            "version": "0.0.1",
-            "devDependencies": {
-              "prettier": "^29.7.0",
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            devDependencies: {
+              prettier: '^29.7.0',
             },
-            "private": true,
-            "dependencies": {}
+            private: true,
+            dependencies: {},
           }),
-          '/test/prettier.config.js': '// used by jest'
+          '/test/prettier.config.js': '// used by jest',
         });
 
         const { unusedFiles } = await analyze({
-          cwd: '/test'
+          cwd: '/test',
         });
 
         expect(unusedFiles).toEqual([]);
@@ -962,15 +953,15 @@ import Foo from '@/components/Foo'
         it('should not report aliased JSX path as unused', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "version": "0.0.1",
-              "dependencies": {
-                "next": "^29.7.0",
+              name: 'unused-typescript-file',
+              version: '0.0.1',
+              dependencies: {
+                next: '^29.7.0',
               },
-              "scripts": {
-                "dev": "next dev"
+              scripts: {
+                dev: 'next dev',
               },
-              "private": true
+              private: true,
             }),
             '/test/src/pages/index.js': `
               import Foo from '@/components/Foo';
@@ -988,7 +979,7 @@ import Foo from '@/components/Foo'
                   }
                 }
               }
-            `
+            `,
           });
 
           const { unusedFiles } = await analyze({
@@ -1002,15 +993,15 @@ import Foo from '@/components/Foo'
         it('should not report aliased JS path as unused', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "version": "0.0.1",
-              "dependencies": {
-                "next": "^29.7.0",
+              name: 'unused-typescript-file',
+              version: '0.0.1',
+              dependencies: {
+                next: '^29.7.0',
               },
-              "scripts": {
-                "dev": "next dev"
+              scripts: {
+                dev: 'next dev',
               },
-              "private": true
+              private: true,
             }),
             '/test/next.config.js': `
               module.exports = {}
@@ -1028,7 +1019,7 @@ import Foo from '@/components/Foo'
                   }
                 }
               }
-            `
+            `,
           });
 
           const { unusedFiles } = await analyze({
@@ -1042,15 +1033,15 @@ import Foo from '@/components/Foo'
         it('should not report files referenced alongside lib imports as unused', async () => {
           mock({
             '/test/package.json': JSON.stringify({
-              "name": "unused-typescript-file",
-              "version": "0.0.1",
-              "dependencies": {
-                "next": "^29.7.0",
+              name: 'unused-typescript-file',
+              version: '0.0.1',
+              dependencies: {
+                next: '^29.7.0',
               },
-              "scripts": {
-                "dev": "next dev"
+              scripts: {
+                dev: 'next dev',
               },
-              "private": true
+              private: true,
             }),
             '/test/src/pages/index.js': `
               import Foo from 'somelib';
@@ -1069,7 +1060,7 @@ import Foo from '@/components/Foo'
                   }
                 }
               }
-            `
+            `,
           });
 
           const { unusedFiles } = await analyze({
@@ -1086,14 +1077,14 @@ import Foo from '@/components/Foo'
       it('should not mark eslint.config.js as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "eslint": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              eslint: '0.0.0',
             },
-            "private": true
+            private: true,
           }),
-          '/test/eslint.config.js': '// eslint config'
+          '/test/eslint.config.js': '// eslint config',
         });
 
         const { unusedFiles } = await analyze({
@@ -1109,14 +1100,14 @@ import Foo from '@/components/Foo'
       it('should not mark postcss.config.js as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "postcss": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              postcss: '0.0.0',
             },
-            "private": true
+            private: true,
           }),
-          '/test/postcss.config.js': `//postcss config`
+          '/test/postcss.config.js': `//postcss config`,
         });
 
         const { unusedFiles } = await analyze({
@@ -1132,14 +1123,14 @@ import Foo from '@/components/Foo'
       it('should not mark foo.test.js as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "better-node-test": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              'better-node-test': '0.0.0',
             },
-            "private": true
+            private: true,
           }),
-          '/test/foo.test.js': '// test file'
+          '/test/foo.test.js': '// test file',
         });
 
         const { unusedFiles } = await analyze({
@@ -1153,14 +1144,14 @@ import Foo from '@/components/Foo'
       it('should not mark foo.test.ts as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "better-node-test": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              'better-node-test': '0.0.0',
             },
-            "private": true
+            private: true,
           }),
-          '/test/foo.test.ts': '// test file'
+          '/test/foo.test.ts': '// test file',
         });
 
         const { unusedFiles } = await analyze({
@@ -1176,17 +1167,17 @@ import Foo from '@/components/Foo'
       it('should not mark referenced config file as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "rollup": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              rollup: '0.0.0',
             },
-            "scripts": {
-              "foo": "rollup -c rollup.used.config.ts"
+            scripts: {
+              foo: 'rollup -c rollup.used.config.ts',
             },
-            "private": true
+            private: true,
           }),
-          '/test/rollup.used.config.ts': '// test file'
+          '/test/rollup.used.config.ts': '// test file',
         });
 
         const { unusedFiles } = await analyze({
@@ -1202,14 +1193,14 @@ import Foo from '@/components/Foo'
       it('should not mark *.test.ts files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "vitest": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              vitest: '0.0.0',
             },
-            "private": true
+            private: true,
           }),
-          '/test/src/used.test.ts': '// test file'
+          '/test/src/used.test.ts': '// test file',
         });
 
         const { unusedFiles } = await analyze({
@@ -1223,14 +1214,14 @@ import Foo from '@/components/Foo'
       it('should not mark vite.config.ts as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "vitest": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              vitest: '0.0.0',
             },
-            "private": true
+            private: true,
           }),
-          '/test/vite.config.ts': '// test file'
+          '/test/vite.config.ts': '// test file',
         });
 
         const { unusedFiles } = await analyze({
@@ -1244,12 +1235,12 @@ import Foo from '@/components/Foo'
       it('should not mark vitest setup file as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "dependencies": {
-              "vitest": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            dependencies: {
+              vitest: '0.0.0',
             },
-            "private": true
+            private: true,
           }),
           '/test/vite.config.ts': `
             export default {
@@ -1258,7 +1249,7 @@ import Foo from '@/components/Foo'
               }
             }
           `,
-          '/test/vitest.setup.ts': '// used'
+          '/test/vitest.setup.ts': '// used',
         });
 
         const { unusedFiles } = await analyze({
@@ -1268,11 +1259,11 @@ import Foo from '@/components/Foo'
               default: {
                 default: {
                   test: {
-                    setupFiles: ['./vitest.setup.ts']
-                  }
-                }
-              }
-            }
+                    setupFiles: ['./vitest.setup.ts'],
+                  },
+                },
+              },
+            };
           },
         });
 
@@ -1285,12 +1276,12 @@ import Foo from '@/components/Foo'
     it('should not include any files from node_modules', async () => {
       mock({
         '/test/package.json': JSON.stringify({
-          "name": "unused-typescript-file",
-          "version": "0.0.1",
-          "private": true,
-          "dependencies": {}
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
         }),
-        '/test/node_modules/package/file.ts': '// in node modules'
+        '/test/node_modules/package/file.ts': '// in node modules',
       });
 
       const { unusedFiles } = await analyze({
@@ -1308,30 +1299,28 @@ import Foo from '@/components/Foo'
       it('should not mark child package entry as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {},
-            "workspaces": [
-              "packages/foo"
-            ],
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
+            workspaces: ['packages/foo'],
           }),
           '/test/packages/foo/package.json': JSON.stringify({
-            "name": "child",
-            "version": "0.0.1",
-            "private": true,
-            "main": "index.js",
-            "dependencies": {},
+            name: 'child',
+            version: '0.0.1',
+            private: true,
+            main: 'index.js',
+            dependencies: {},
           }),
-          '/test/packages/foo/index.js': '// main file for package'
+          '/test/packages/foo/index.js': '// main file for package',
         });
-  
+
         const { unusedFiles } = await analyze({
           cwd: '/test',
-  
+
           import: mockImport,
         });
-  
+
         expect(unusedFiles).toEqual([]);
       });
     });
@@ -1340,37 +1329,34 @@ import Foo from '@/components/Foo'
       it('should not report used config file from hoisted dependency as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
-            "name": "unused-typescript-file",
-            "version": "0.0.1",
-            "private": true,
-            "dependencies": {
-              "jest": "0.0.0"
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            private: true,
+            dependencies: {
+              jest: '0.0.0',
             },
-            "workspaces": [
-              "packages/foo"
-            ],
+            workspaces: ['packages/foo'],
           }),
           '/test/packages/foo/package.json': JSON.stringify({
-            "name": "child",
-            "version": "0.0.1",
-            "private": true,
-            "main": "index.js",
-            "dependencies": {},
+            name: 'child',
+            version: '0.0.1',
+            private: true,
+            main: 'index.js',
+            dependencies: {},
           }),
-          '/test/packages/foo/jest.config.js': '// main file for package'
+          '/test/packages/foo/jest.config.js': '// main file for package',
         });
-  
+
         const { unusedFiles } = await analyze({
           cwd: '/test',
-  
+
           import: mockImport,
         });
-  
+
         expect(unusedFiles).toEqual([]);
-      })
+      });
     });
   });
-
 });
 
 describe('parseFile', () => {
@@ -1381,7 +1367,8 @@ describe('parseFile', () => {
         source: `
         type Foo = { prop: string };
         const foo: Foo = { prop: 'asd' };  
-      `})
+      `,
+      });
     }).not.toThrow();
   });
 
@@ -1392,8 +1379,8 @@ describe('parseFile', () => {
         source: `
           @Component({ })
           class Foo {}
-        `
-      })
+        `,
+      });
     }).not.toThrow();
   });
 
@@ -1417,7 +1404,8 @@ describe('parseFile', () => {
 
         export class NavComponent {}
 
-      `})
+      `,
+      });
     }).not.toThrow();
   });
 
@@ -1434,7 +1422,8 @@ describe('parseFile', () => {
             <div>Hi</div>
           );
         }
-      `})
+      `,
+      });
     }).not.toThrow();
   });
 
@@ -1448,7 +1437,8 @@ describe('parseFile', () => {
             <div>Hi</div>
           );
         }
-      `})
+      `,
+      });
     }).not.toThrow();
   });
 
@@ -1464,7 +1454,8 @@ title: Front matter
 import { Foo } from 'somewhere';
 
 <div>Some JSX</div>
-      `})
+      `,
+      });
     }).not.toThrow();
-  })
+  });
 });

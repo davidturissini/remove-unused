@@ -1,7 +1,7 @@
 import yargs from 'yargs/yargs';
 import { analyze } from '@remove-unused/engine';
 
-main()
+main();
 
 export async function main() {
   yargs(process.argv.slice(2))
@@ -14,12 +14,14 @@ export async function main() {
           describe: 'Directory to scan',
           default: process.cwd(),
         });
-      }, async ({ cwd }: { cwd: string }) => {
+      },
+      async ({ cwd }: { cwd: string }) => {
         const results = await analyze({
           cwd,
         });
         process.stdout.write(JSON.stringify(results, null, 2));
-      })
+      },
+    )
     .command(
       'report [cwd]',
       'Report unused files',
@@ -29,11 +31,13 @@ export async function main() {
           describe: 'Directory to scan',
           default: process.cwd(),
         });
-      }, async ({ cwd }: { cwd: string }) => {
+      },
+      async ({ cwd }: { cwd: string }) => {
         const results = await analyze({
           cwd,
         });
         process.stdout.write(JSON.stringify(results.unusedFiles, null, 2));
-      })
+      },
+    )
     .help().argv;
 }

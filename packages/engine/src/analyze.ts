@@ -1,8 +1,17 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join as pathJoin, extname, dirname } from 'node:path';
-import { ModuleItem, parseSync, type Module as SwcModule, type CallExpression, type Expression, type ImportDeclaration, ExportDeclaration, ExportNamedDeclaration } from '@swc/core';
-import { remark } from 'remark'
-import remarkMdx from 'remark-mdx'
+import {
+  ModuleItem,
+  parseSync,
+  type Module as SwcModule,
+  type CallExpression,
+  type Expression,
+  type ImportDeclaration,
+  ExportDeclaration,
+  ExportNamedDeclaration,
+} from '@swc/core';
+import { remark } from 'remark';
+import remarkMdx from 'remark-mdx';
 import { tsImport } from 'tsx/esm/api';
 import { globSync } from 'glob';
 import { plugin as bntPlugin } from './plugins/bnt.js';
@@ -17,9 +26,12 @@ import { plugin as postcssPlugin } from './plugins/postcss.js';
 import { plugin as rollupPlugin } from './plugins/rollup.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 import { plugin as vitestPlugin } from './plugins/vitest.js';
-import { type PackageDefinition, readPackageJson, type WorkspaceDefinition } from './package.js';
+import {
+  type PackageDefinition,
+  readPackageJson,
+  type WorkspaceDefinition,
+} from './package.js';
 import type { Plugin, PathResolver } from './plugin.js';
-
 
 const pluginsRegistry = [
   vitestPlugin,
@@ -39,56 +51,65 @@ const pluginsRegistry = [
 type Params = {
   cwd: string;
   import?: (path: string) => Promise<unknown>;
-}
+};
 
 export type State = {
-  import(path: string): Promise<unknown>
-  resolvePath(path: string): (string | undefined);
+  import(path: string): Promise<unknown>;
+  resolvePath(path: string): string | undefined;
   addResolver(resolver: PathResolver): void;
   isReferenced(path: string): boolean;
   addRef(path: string): void;
   isLibraryFile(path: string): boolean;
-}
+};
 
 type FileDef = {
   type: 'ecmascript' | 'mdx';
-  source: string
-}
+  source: string;
+};
 
-function parsePackage({ parentWorkspace, cwd }: { parentWorkspace: WorkspaceDefinition | null, cwd: string }): PackageDefinition {
+function parsePackage({
+  parentWorkspace,
+  cwd,
+}: {
+  parentWorkspace: WorkspaceDefinition | null;
+  cwd: string;
+}): PackageDefinition {
   const packageJson = readPackageJson({ cwd });
 
   return {
     cwd,
     packageJson,
     parentWorkspace,
-  }
+  };
 }
 
-async function parseWorkspace({ cwd, state }: { cwd: string, state: State }): Promise<WorkspaceDefinition> {
+async function parseWorkspace({
+  cwd,
+  state,
+}: {
+  cwd: string;
+  state: State;
+}): Promise<WorkspaceDefinition> {
   const packageJson = readPackageJson({ cwd });
   const typescriptFiles = globSync(
     pathJoin(cwd, '**/*.{js,ts,jsx,tsx,mjs,cjs}'),
     {
-      ignore: pathJoin(cwd, '**/node_modules/**')
-    }
+      ignore: pathJoin(cwd, '**/node_modules/**'),
+    },
   );
 
-  const mdxFiles = globSync(
-    pathJoin(cwd, '**/*.mdx'),
-    {
-      ignore: pathJoin(cwd, '**/node_modules/**')
-    }
-  );
+  const mdxFiles = globSync(pathJoin(cwd, '**/*.mdx'), {
+    ignore: pathJoin(cwd, '**/node_modules/**'),
+  });
 
   const files: WorkspaceDefinition['files'] = {};
 
   mdxFiles.forEach((filePath) => {
     files[filePath] = {
       type: 'mdx',
-      source: readFileSync(filePath).toString()
+      source: readFileSync(filePath).toString(),
     };
-  })
+  });
 
   typescriptFiles.forEach((filePath) => {
     if (statSync(filePath).isDirectory() === true) {
@@ -96,7 +117,7 @@ async function parseWorkspace({ cwd, state }: { cwd: string, state: State }): Pr
     }
     files[filePath] = {
       type: 'ecmascript',
-      source: readFileSync(filePath).toString()
+      source: readFileSync(filePath).toString(),
     };
   });
 
@@ -110,9 +131,7 @@ async function parseWorkspace({ cwd, state }: { cwd: string, state: State }): Pr
     files,
     parentWorkspace: null,
   } as WorkspaceDefinition;
-  
-  
-  
+
   const fullPaths = workspaces.map((pathGlob) => {
     return pathJoin(cwd, pathGlob);
   });
@@ -122,18 +141,21 @@ async function parseWorkspace({ cwd, state }: { cwd: string, state: State }): Pr
       parsePackage({
         cwd: packagePath,
         parentWorkspace: workspace,
-      })
-    )
+      }),
+    );
   }
 
   return workspace;
 }
 
-function walk(exp: ModuleItem | Expression, visitor: {
-  require: (exp: CallExpression) => void;
-  exportStatement: (exp: ExportNamedDeclaration) => void;
-  importStatement: (exp: ImportDeclaration) => void;
-}) {
+function walk(
+  exp: ModuleItem | Expression,
+  visitor: {
+    require: (exp: CallExpression) => void;
+    exportStatement: (exp: ExportNamedDeclaration) => void;
+    importStatement: (exp: ImportDeclaration) => void;
+  },
+) {
   switch (exp.type) {
     case 'ImportDeclaration': {
       visitor.importStatement(exp);
@@ -167,17 +189,23 @@ function walk(exp: ModuleItem | Expression, visitor: {
 
 const IMPORT_EXTENSIONS = ['.ts', '.js', '.mjs', '.tsx', '.jsx'];
 
-
 function resolveImportPath(sourceDirectory: string, importPath: string) {
   const noQueryParam = importPath.split('?')[0];
   const extension = extname(noQueryParam);
-  let normalized: string = pathJoin(sourceDirectory, `${noQueryParam.replace(extension, '')}${extension}`);
+  let normalized: string = pathJoin(
+    sourceDirectory,
+    `${noQueryParam.replace(extension, '')}${extension}`,
+  );
 
   // An import with no extension
   if (extension === '') {
     // check if there is an index file
-    for(const indexFileName of ['index.ts', 'index.js', 'index.mjs']) {
-      const indexFilePath = pathJoin(sourceDirectory, noQueryParam, indexFileName);
+    for (const indexFileName of ['index.ts', 'index.js', 'index.mjs']) {
+      const indexFilePath = pathJoin(
+        sourceDirectory,
+        noQueryParam,
+        indexFileName,
+      );
       if (existsSync(indexFilePath)) {
         return indexFilePath;
       }
@@ -188,17 +216,21 @@ function resolveImportPath(sourceDirectory: string, importPath: string) {
       return pathJoin(sourceDirectory, path);
     }).find((absPath) => {
       return existsSync(absPath);
-    })
-    
+    });
+
     if (normalizedWithExtension !== undefined) {
       normalized = normalizedWithExtension;
     }
   }
-  
+
   return normalized;
 }
 
-function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state: State) {
+function resolveRequireStatements(
+  sourceFilePath: string,
+  ast: SwcModule,
+  state: State,
+) {
   const staticRequireStatements: string[] = [];
   const importStatements: string[] = [];
 
@@ -208,7 +240,10 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
         if (exportStatement.source?.type === 'StringLiteral') {
           const resolved = state.resolvePath(exportStatement.source.value);
           if (resolved === undefined) {
-            const resolvedFilePath = resolveImportPath(dirname(sourceFilePath), exportStatement.source.value);
+            const resolvedFilePath = resolveImportPath(
+              dirname(sourceFilePath),
+              exportStatement.source.value,
+            );
             importStatements.push(resolvedFilePath);
             return;
           }
@@ -217,10 +252,12 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
       },
       importStatement: (importStatement) => {
         if (importStatement.source.type === 'StringLiteral') {
-          
           const resolved = state.resolvePath(importStatement.source.value);
           if (resolved === undefined) {
-            const resolvedFilePath = resolveImportPath(dirname(sourceFilePath), importStatement.source.value);
+            const resolvedFilePath = resolveImportPath(
+              dirname(sourceFilePath),
+              importStatement.source.value,
+            );
             importStatements.push(resolvedFilePath);
             return;
           }
@@ -242,19 +279,16 @@ function resolveRequireStatements(sourceFilePath: string, ast: SwcModule, state:
         const argValue = firstArgument.expression.value;
         const extension = extname(argValue) || '.js';
         staticRequireStatements.push(
-          pathJoin(
-            dirname(sourceFilePath),
-            `${argValue}${extension}`
-          )
+          pathJoin(dirname(sourceFilePath), `${argValue}${extension}`),
         );
-      }
+      },
     });
   });
 
   return {
     importStatements,
     static: staticRequireStatements,
-  }
+  };
 }
 
 type AstDef = ReturnType<typeof parseFile>;
@@ -266,28 +300,28 @@ export function parseFile(fileName: string, file: FileDef) {
       return {
         type: 'ecmascript',
         ast: parseSync(file.source, {
-          syntax: (ext === '.ts' || ext === '.tsx') ? 'typescript' : 'ecmascript',
+          syntax: ext === '.ts' || ext === '.tsx' ? 'typescript' : 'ecmascript',
           decorators: true,
           decoratorsBeforeExport: true,
           tsx: true,
           jsx: true,
-        })
+        }),
       } as const;
     }
     case 'mdx': {
       return {
         type: 'mdx',
-        ast: remark()
-          .use(remarkMdx)
-          .parse(file.source)
+        ast: remark().use(remarkMdx).parse(file.source),
       } as const;
     }
   }
-
-
 }
 
-function resolveMdxImportStatements(sourceFilePath: string, ast: AstDef, state: State) {
+function resolveMdxImportStatements(
+  sourceFilePath: string,
+  ast: AstDef,
+  state: State,
+) {
   if (ast.ast.type !== 'root') {
     throw new Error('Invalid top level MDX ast');
   }
@@ -311,31 +345,29 @@ function resolveMdxImportStatements(sourceFilePath: string, ast: AstDef, state: 
     estree?.body.forEach((item) => {
       if (item.type === 'ImportDeclaration') {
         if (typeof item.source.value !== 'string') {
-          throw new Error(`Import source "${item.source.value}" is not a string`)
+          throw new Error(
+            `Import source "${item.source.value}" is not a string`,
+          );
         }
 
         const { value: importSource } = item.source;
         const resolved = state.resolvePath(importSource);
-          if (resolved === undefined) {
-            const extension = extname(importSource) || '.ts';
-            importStatements.push(
-              pathJoin(
-                dirname(sourceFilePath),
-                `${importSource}${extension}`
-              )
-            );
-            return;
-          }
-          importStatements.push(resolved);
+        if (resolved === undefined) {
+          const extension = extname(importSource) || '.ts';
+          importStatements.push(
+            pathJoin(dirname(sourceFilePath), `${importSource}${extension}`),
+          );
+          return;
+        }
+        importStatements.push(resolved);
       }
-    })
-
+    });
   });
 
   return {
     static: [],
     importStatements,
-  }
+  };
 }
 
 function collectFileReferences(path: string, ast: AstDef, state: State) {
@@ -349,29 +381,36 @@ function collectFileReferences(path: string, ast: AstDef, state: State) {
   }
 }
 
-async function walkFiles({ files: packageFiles }: Pick<WorkspaceDefinition, 'files'>, state: State) {
-  const filePaths = Object.keys(packageFiles) as Array<keyof typeof packageFiles>;
+async function walkFiles(
+  { files: packageFiles }: Pick<WorkspaceDefinition, 'files'>,
+  state: State,
+) {
+  const filePaths = Object.keys(packageFiles) as Array<
+    keyof typeof packageFiles
+  >;
   filePaths.forEach((path) => {
-    if (state.isReferenced(path) === false && state.isLibraryFile(path) === true) {
+    if (
+      state.isReferenced(path) === false &&
+      state.isLibraryFile(path) === true
+    ) {
       state.addRef(path);
     }
 
     try {
       const ast = parseFile(path, packageFiles[path]);
-      const { importStatements, static: staticRequireExpressions } = collectFileReferences(path, ast, state);
-
+      const { importStatements, static: staticRequireExpressions } =
+        collectFileReferences(path, ast, state);
 
       [...importStatements, ...staticRequireExpressions].forEach((path) => {
         state.addRef(path);
         const extName = extname(path);
         if (extName === '.js' && existsSync(path.replace('.js', '.d.ts'))) {
           state.addRef(path.replace('.js', '.d.ts'));
-        } 
-    });
-    } catch { }
+        }
+      });
+    } catch {}
   });
 }
-
 
 export async function analyze({ cwd, import: importParam }: Params) {
   const usedFiles: Record<string, true> = {};
@@ -385,7 +424,7 @@ export async function analyze({ cwd, import: importParam }: Params) {
 
       const extName = extname(path);
       if (extName === '.ts') {
-        const imported =  await tsImport(path, './');
+        const imported = await tsImport(path, './');
         return imported;
       }
 
@@ -416,13 +455,11 @@ export async function analyze({ cwd, import: importParam }: Params) {
     addRef(path) {
       usedFiles[path] = true;
     },
-  }
+  };
 
   const workspaceDef = await parseWorkspace({ cwd, state });
-  const {
-    files: sourceFiles,
-  } = workspaceDef;
-  
+  const { files: sourceFiles } = workspaceDef;
+
   const flatPackages = [workspaceDef, ...workspaceDef.packages];
   for (const packageDef of flatPackages) {
     for (const createPlugin of pluginsRegistry) {
@@ -436,11 +473,13 @@ export async function analyze({ cwd, import: importParam }: Params) {
 
   await walkFiles(workspaceDef, state);
 
-  const unusedFiles = Object.keys(sourceFiles).filter((path: keyof typeof sourceFiles) => {
-    return usedFiles[path] === undefined;
-  });
+  const unusedFiles = Object.keys(sourceFiles).filter(
+    (path: keyof typeof sourceFiles) => {
+      return usedFiles[path] === undefined;
+    },
+  );
 
   return {
     unusedFiles,
-  }
+  };
 }

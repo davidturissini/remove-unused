@@ -16,4 +16,4 @@ export const plugin = createPlugin(({ state, packageDef }) => {
       state.addRef(abs);
     }
   });
-})
+});
