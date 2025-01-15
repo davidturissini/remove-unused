@@ -13,10 +13,10 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10
-      - name: pnpm i
+      - name: Install Dependencies
         run: |
           pnpm i
-      - name: Lint
+      - name: Lint and Test
         run: |
           pnpx nx run-many --target lint,test --verbose
       - name: Formatting
