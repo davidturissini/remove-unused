@@ -62,4 +62,4 @@ jobs:
           pnpm i
       - name: Create Release
         run: |
-          pnpx nx release --dry-run --skip-publish
+          pnpx nx release --dry-run --specifier patch --skip-publish

@@ -1,10 +1,5 @@
 {
   "release": {
-    "changelog": {
-      "workspaceChangelog": {
-        "createRelease": "github"
-      }
-    },
     "version": {
       "preVersionCommand": "pnpx nx run-many -t build"
     }
