@@ -48,6 +48,8 @@ jobs:
   release-remove-unused:
     name: Release and Publish "remove-unused"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       - static
     steps:
