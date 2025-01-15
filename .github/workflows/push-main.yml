@@ -74,7 +74,6 @@ jobs:
         run: |
           git config --global user.name 'David Turissini'
           git config --global user.email 'davidturissini@users.noreply.github.com'
-          npm adduser davidturissini-jumpfish
           pnpx nx release --specifier prerelease --yes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
