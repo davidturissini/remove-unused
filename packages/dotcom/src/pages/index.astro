@@ -1,22 +1,62 @@
+---
+import CodeBlock from '../components/CodeBlock.astro';
+
+import nextLogo from "../logos/nextjs-icon-light-background.svg";
+import postCssLogo from "../logos/postcss-logo-symbol-black.svg";
+import jestLogo from "../logos/jest.svg";
+import eslintLogo from "../logos/eslint-logo-color.svg";
+---
+
 <html>
   <head>
     <title>Garbage Collector for Your Code - Remove Unused</title>
   </head>
   <body>
-    <header class="border-b gap-y-10 flex items-center flex-col justify-center pt-10 pb-10">
-      <h1 class="text-balance text-4xl text-center">Garbage Collection for your code</h1>
-      <input readonly class="text-center w-[300px] border-2 p-2" type="text" value="npx remove-unused@latest" />
-    </header>
-    <main class="p-10">
-      <h2 class="pb-10 text-balance text-2xl">Automatically remove unused Typescript files</h2>
-      <div>
-        Built-in support for:
-        <ul>
-          <li class="pl-5">Next</li>
-          <li class="pl-5">Post CSS</li>
-          <li class="pl-5">Jest</li>
+    <nav class="p-4 border-b"><a href="/">Remove Unused</a></nav>
+    <main>
+      <header
+        class="gap-y-10 flex items-center flex-col justify-center pt-20 pb-20"
+      >
+        <h1 class="text-balance text-4xl text-center">
+          Garbage Collection for Your Code
+        </h1>
+        <CodeBlock id="code-block-main" />
+      </header>
+      <section class="flex flex-col items-center pt-3">
+        <h3 class="pb-4">Support for automatically deleting unused files:</h3>
+        <ul class="flex items-center">
+          {
+            [
+              {
+                image: nextLogo,
+                alt: "NextJs",
+              },
+              {
+                image: postCssLogo,
+                alt: "PostCSS",
+              },
+              {
+                image: jestLogo,
+                alt: "Jest",
+              },
+              {
+                image: eslintLogo,
+                alt: "Eslint",
+              },
+            ].map(({ image, alt }) => {
+              return (
+                <li class="pl-5">
+                  <img class="w-[60px]" {...image} alt={alt} />
+                </li>
+              );
+            })
+          }
         </ul>
-      </div>
+      </section>
+      <section class="p-4 mt-20 pt-8">
+        <h6 class="text-sm">What is Remove Unused?</h6>
+        <p class="text-lg">Remove Unused will automatically find and remove unused files from your Typescript project.</p>
+      </section>
     </main>
   </body>
 </html>
