@@ -9,7 +9,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
           version: 10
       - name: pnpm i
@@ -17,7 +18,7 @@ jobs:
           pnpm i
       - name: Lint
         run: |
-          pnpx nx run-many --target lint,test
+          pnpx nx run-many --target lint,test --verbose
       - name: Formatting
         run: |
           pnpx nx format:check --all
