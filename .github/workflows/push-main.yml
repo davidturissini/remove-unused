@@ -45,5 +45,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           environment: production
           command: pages deploy packages/dotcom/dist --project-name=remove-unused-dot-dom
-
-
