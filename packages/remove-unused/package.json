@@ -1,7 +1,7 @@
 {
   "name": "remove-unused",
   "type": "module",
-  "version": "0.0.9-3",
+  "version": "0.0.9-4",
   "repository": {
     "type": "git",
     "url": "https://github.com/davidturissini/remove-unused",
@@ -16,7 +16,7 @@
     "remove-unused": "bin/remove-unused.mjs"
   },
   "dependencies": {
-    "@remove-unused/engine": "0.0.9-3",
+    "@remove-unused/engine": "0.0.9-4",
     "yargs": "17.7.2"
   },
   "devDependencies": {
