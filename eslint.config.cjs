@@ -4,7 +4,7 @@ const tseslint = require('typescript-eslint');
 /** @type {import('eslint').Linter.Config[]} */
 module.exports = [
   {
-    ignores: ["**/dist/*", "**/.astro/*"]
+    ignores: ['**/dist/*', '**/.astro/*'],
   },
   { files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'] },
   pluginJs.configs.recommended,

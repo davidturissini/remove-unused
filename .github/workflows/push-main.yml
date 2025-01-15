@@ -1,0 +1,20 @@
+name: Build (branch Main)
+on:
+  push:
+    branches:
+      - main
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: pnpm i
+        run: |
+          pnpm i
+      - name: Lint
+        run: |
+          pnpx nx run-many --target lint,test
+      - name: Formatting
+        run: |
+          pnpx nx format:check --all
