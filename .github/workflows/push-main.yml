@@ -64,4 +64,6 @@ jobs:
           pnpm i
       - name: Create Release
         run: |
+          git config --global user.name 'David Turissini'
+          git config --global user.email 'davidturissini@users.noreply.github.com'
           pnpx nx release --dry-run --specifier patch --skip-publish
