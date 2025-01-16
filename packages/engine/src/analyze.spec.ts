@@ -365,6 +365,7 @@ describe('analyze', () => {
         '/test/package.json': JSON.stringify({
           name: 'unused-typescript-file',
           version: '0.0.1',
+          type: 'module',
           private: true,
           dependencies: {},
           devDependencies: {
@@ -404,6 +405,7 @@ describe('analyze', () => {
     it('should mark imports from config as used', async () => {
       mock({
         '/test/package.json': JSON.stringify({
+          type: 'module',
           name: 'unused-typescript-file',
           version: '0.0.1',
           private: true,
@@ -435,6 +437,7 @@ describe('analyze', () => {
     it('ignore ? from import statements', async () => {
       mock({
         '/test/package.json': JSON.stringify({
+          type: 'module',
           name: 'unused-typescript-file',
           version: '0.0.1',
           private: true,
@@ -570,6 +573,7 @@ describe('analyze', () => {
       it('should not mark jest.config.js files as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
+            type: 'module',
             name: 'unused-typescript-file',
             main: 'src/main.ts',
             version: '0.0.1',
@@ -594,6 +598,7 @@ describe('analyze', () => {
         mock({
           '/test/package.json': JSON.stringify({
             name: 'unused-typescript-file',
+            type: 'module',
             main: 'src/main.ts',
             version: '0.0.1',
             devDependencies: {
@@ -651,6 +656,7 @@ describe('analyze', () => {
           mock({
             '/test/package.json': JSON.stringify({
               name: 'unused-typescript-file',
+              type: 'module',
               main: 'src/main.ts',
               version: '0.0.1',
               private: true,
@@ -691,6 +697,7 @@ describe('analyze', () => {
             mock({
               '/test/package.json': JSON.stringify({
                 name: 'unused-typescript-file',
+                type: 'module',
                 main: 'src/main.ts',
                 version: '0.0.1',
                 private: true,
@@ -718,6 +725,7 @@ describe('analyze', () => {
           it('should import the file', async () => {
             mock({
               '/test/package.json': JSON.stringify({
+                type: 'module',
                 name: 'unused-typescript-file',
                 main: 'src/main.ts',
                 version: '0.0.1',
@@ -740,7 +748,10 @@ describe('analyze', () => {
               import: importSpy,
             });
 
-            expect(importSpy).toHaveBeenCalledWith('/test/next.config.mjs');
+            expect(importSpy).toHaveBeenCalledWith(
+              '/test/next.config.mjs',
+              './',
+            );
           });
         });
       });
@@ -750,6 +761,7 @@ describe('analyze', () => {
           mock({
             '/test/package.json': JSON.stringify({
               name: 'unused-typescript-file',
+              type: 'module',
               main: 'src/main.ts',
               version: '0.0.1',
               private: true,
@@ -781,6 +793,7 @@ describe('analyze', () => {
         it('should not mark MDX files in pages dir as unused when config is mjs', async () => {
           mock({
             '/test/package.json': JSON.stringify({
+              type: 'module',
               name: 'unused-typescript-file',
               main: 'src/main.ts',
               version: '0.0.1',
@@ -826,6 +839,7 @@ import Foo from '@/components/Foo'
           mock({
             '/test/package.json': JSON.stringify({
               name: 'unused-typescript-file',
+              type: 'module',
               main: 'src/main.ts',
               version: '0.0.1',
               private: true,
@@ -856,6 +870,7 @@ import Foo from '@/components/Foo'
           mock({
             '/test/package.json': JSON.stringify({
               name: 'unused-typescript-file',
+              type: 'module',
               main: 'src/main.ts',
               version: '0.0.1',
               private: true,
@@ -953,6 +968,7 @@ import Foo from '@/components/Foo'
         it('should not report aliased JSX path as unused', async () => {
           mock({
             '/test/package.json': JSON.stringify({
+              type: 'module',
               name: 'unused-typescript-file',
               version: '0.0.1',
               dependencies: {
@@ -995,6 +1011,7 @@ import Foo from '@/components/Foo'
             '/test/package.json': JSON.stringify({
               name: 'unused-typescript-file',
               version: '0.0.1',
+              type: 'module',
               dependencies: {
                 next: '^29.7.0',
               },
@@ -1034,6 +1051,7 @@ import Foo from '@/components/Foo'
           mock({
             '/test/package.json': JSON.stringify({
               name: 'unused-typescript-file',
+              type: 'module',
               version: '0.0.1',
               dependencies: {
                 next: '^29.7.0',
@@ -1214,6 +1232,7 @@ import Foo from '@/components/Foo'
       it('should not mark vite.config.ts as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
+            type: 'module',
             name: 'unused-typescript-file',
             version: '0.0.1',
             dependencies: {
@@ -1236,6 +1255,7 @@ import Foo from '@/components/Foo'
         mock({
           '/test/package.json': JSON.stringify({
             name: 'unused-typescript-file',
+            type: 'module',
             version: '0.0.1',
             dependencies: {
               vitest: '0.0.0',
@@ -1329,6 +1349,7 @@ import Foo from '@/components/Foo'
       it('should not report used config file from hoisted dependency as unused', async () => {
         mock({
           '/test/package.json': JSON.stringify({
+            type: 'module',
             name: 'unused-typescript-file',
             version: '0.0.1',
             private: true,

@@ -1,0 +1,24 @@
+name: Build (branch Main)
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Install Dependencies
+        run: |
+          pnpm i
+      - name: Lint and Test
+        run: |
+          pnpx nx run-many --target lint,test
+      - name: Formatting
+        run: |
+          pnpx nx format:check --all
