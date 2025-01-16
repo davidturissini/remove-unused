@@ -11,8 +11,9 @@ import {
 } from '@swc/core';
 import { remark } from 'remark';
 import remarkMdx from 'remark-mdx';
-import { tsImport } from 'tsx/esm/api';
 import { globSync } from 'glob';
+
+import { importFile } from './importer.js';
 import { plugin as bntPlugin } from './plugins/bnt.js';
 import { plugin as eslintPlugin } from './plugins/eslint.js';
 import { plugin as jestPlugin } from './plugins/jest.js';
@@ -122,13 +123,14 @@ async function parseWorkspace({
   const { workspaces } = packageJson;
 
   const packages: PackageDefinition[] = [];
-  const workspace = {
+  const workspace: WorkspaceDefinition = {
     packages,
     packageJson,
     cwd,
     files,
+    moduleType: packageJson.type === undefined ? 'commonjs' : packageJson.type,
     parentWorkspace: null,
-  } as WorkspaceDefinition;
+  };
 
   const fullPaths = workspaces.map((pathGlob) => {
     return pathJoin(cwd, pathGlob);
@@ -418,17 +420,11 @@ export async function analyze({ cwd, import: importParam }: Params) {
   const plugins: Plugin[] = [];
   const state: State = {
     async import(path) {
-      if (importParam !== undefined) {
-        return await importParam(path);
-      }
-
-      const extName = extname(path);
-      if (extName === '.ts') {
-        const imported = await tsImport(path, './');
-        return imported;
-      }
-
-      return await import(path);
+      return await importFile({
+        path,
+        moduleType: workspaceDef.moduleType,
+        import: importParam,
+      });
     },
     resolvePath: (path: string) => {
       for (const plugin of plugins) {

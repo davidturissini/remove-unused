@@ -9,6 +9,7 @@ export type FileDef = {
 
 const packageJsonSchema = z
   .object({
+    type: z.literal('module').optional(),
     main: z.string().optional(),
     types: z.string().optional(),
     exports: z
@@ -37,6 +38,7 @@ export type PackageDefinition = {
 
 export interface WorkspaceDefinition extends PackageDefinition {
   packages: PackageDefinition[];
+  moduleType: 'commonjs' | 'module';
   files: Record<string, FileDef>;
 }
 
