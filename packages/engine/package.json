@@ -19,6 +19,7 @@
     "remark": "15.0.1",
     "remark-mdx": "3.1.0",
     "zod": "3.24.1",
+    "glob": "11.0.0",
     "@swc/core": "1.10.4",
     "swc": "1.0.11",
     "tsconfig-paths": "4.2.0"
