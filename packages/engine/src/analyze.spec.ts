@@ -30,27 +30,6 @@ describe('analyze', () => {
 
       expect(unusedFiles).toEqual(['/test/src/unused.ts']);
     });
-
-    describe('unused ts file in node_modules', () => {
-      it('should not report as unused', async () => {
-        mock({
-          '/test/node_modules/package/foo.ts': '// in node modules',
-          '/test/package.json': JSON.stringify({
-            name: 'unused-typescript-file',
-            version: '0.0.1',
-            private: true,
-            dependencies: {},
-          }),
-        });
-
-        const { unusedFiles } = await analyze({
-          cwd: '/test',
-          import: mockImport,
-        });
-
-        expect(unusedFiles).toEqual([]);
-      });
-    });
   });
 
   describe('unused js file', () => {
@@ -217,6 +196,29 @@ describe('analyze', () => {
         });
 
         expect(unusedFiles).toEqual([]);
+      });
+
+      describe('with js extension', () => {
+        it('should not report as unused', async () => {
+          mock({
+            '/test/package.json': JSON.stringify({
+              name: 'unused-typescript-file',
+              main: 'src/main.ts',
+              version: '0.0.1',
+              private: true,
+              dependencies: {},
+            }),
+            '/test/src/main.ts': 'require("./utils.js")',
+            '/test/src/utils.js': '//used!',
+          });
+
+          const { unusedFiles } = await analyze({
+            cwd: '/test',
+            import: mockImport,
+          });
+
+          expect(unusedFiles).toEqual([]);
+        });
       });
     });
   });
@@ -1292,8 +1294,8 @@ import Foo from '@/components/Foo'
     });
   });
 
-  describe('node_modules', () => {
-    it('should not include any files from node_modules', async () => {
+  describe('gitignored files', () => {
+    it('should not mark files in gitignored dirs as unused', async () => {
       mock({
         '/test/package.json': JSON.stringify({
           name: 'unused-typescript-file',
@@ -1301,7 +1303,10 @@ import Foo from '@/components/Foo'
           private: true,
           dependencies: {},
         }),
-        '/test/node_modules/package/file.ts': '// in node modules',
+        '/test/src/build/file.js': '// in node modules',
+        '/test/.gitignore': `
+          build/
+        `,
       });
 
       const { unusedFiles } = await analyze({
@@ -1311,6 +1316,53 @@ import Foo from '@/components/Foo'
       });
 
       expect(unusedFiles).toEqual([]);
+    });
+
+    it('should not include any files from node_modules', async () => {
+      mock({
+        '/test/package.json': JSON.stringify({
+          name: 'unused-typescript-file',
+          version: '0.0.1',
+          private: true,
+          dependencies: {},
+        }),
+        '/test/node_modules/package/file.ts': '// in node modules',
+        '/test/.gitignore': `
+          node_modules/
+        `,
+      });
+
+      const { unusedFiles } = await analyze({
+        cwd: '/test',
+
+        import: mockImport,
+      });
+
+      expect(unusedFiles).toEqual([]);
+    });
+
+    describe('unused ts file in node_modules', () => {
+      it('should not report as unused', async () => {
+        mock({
+          '/test/node_modules/package/foo.ts': '// in node modules',
+          '/test/package.json': JSON.stringify({
+            name: 'unused-typescript-file',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
+          }),
+          '/test/.gitignore': `
+            node_modules/
+          `,
+        });
+
+        const { unusedFiles } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(unusedFiles).toEqual([]);
+      });
     });
   });
 

@@ -11,7 +11,7 @@ import {
 } from '@swc/core';
 import { remark } from 'remark';
 import remarkMdx from 'remark-mdx';
-import { globSync } from 'glob';
+import ignoreWalk from 'ignore-walk';
 
 import { importFile } from './importer.js';
 import { plugin as bntPlugin } from './plugins/bnt.js';
@@ -83,6 +83,32 @@ function parsePackage({
   };
 }
 
+function createFileDef(filePath: string) {
+  const extName = extname(filePath);
+  switch (extName) {
+    case '.mdx': {
+      return {
+        type: 'mdx',
+        source: readFileSync(filePath).toString(),
+      } as const;
+    }
+    case '.js':
+    case '.ts':
+    case '.jsx':
+    case '.tsx':
+    case '.mjs':
+    case '.cjs': {
+      if (statSync(filePath).isDirectory() === true) {
+        return;
+      }
+      return {
+        type: 'ecmascript',
+        source: readFileSync(filePath).toString(),
+      } as const;
+    }
+  }
+}
+
 async function parseWorkspace({
   cwd,
 }: {
@@ -90,34 +116,20 @@ async function parseWorkspace({
   state: State;
 }): Promise<WorkspaceDefinition> {
   const packageJson = readPackageJson({ cwd });
-  const typescriptFiles = globSync(
-    pathJoin(cwd, '**/*.{js,ts,jsx,tsx,mjs,cjs}'),
-    {
-      ignore: pathJoin(cwd, '**/node_modules/**'),
-    },
-  );
-
-  const mdxFiles = globSync(pathJoin(cwd, '**/*.mdx'), {
-    ignore: pathJoin(cwd, '**/node_modules/**'),
+  const walked = await ignoreWalk({
+    path: cwd,
+    ignoreFiles: ['.gitignore'],
+    includeEmpty: true,
   });
 
   const files: WorkspaceDefinition['files'] = {};
-
-  mdxFiles.forEach((filePath) => {
-    files[filePath] = {
-      type: 'mdx',
-      source: readFileSync(filePath).toString(),
-    };
-  });
-
-  typescriptFiles.forEach((filePath) => {
-    if (statSync(filePath).isDirectory() === true) {
+  walked.forEach((filePath) => {
+    const fullPath = pathJoin(cwd, filePath);
+    const def = createFileDef(fullPath);
+    if (def === undefined) {
       return;
     }
-    files[filePath] = {
-      type: 'ecmascript',
-      source: readFileSync(filePath).toString(),
-    };
+    files[fullPath] = def;
   });
 
   const { workspaces } = packageJson;
@@ -279,7 +291,10 @@ function resolveRequireStatements(
         const argValue = firstArgument.expression.value;
         const extension = extname(argValue) || '.js';
         staticRequireStatements.push(
-          pathJoin(dirname(sourceFilePath), `${argValue}${extension}`),
+          pathJoin(
+            dirname(sourceFilePath),
+            `${argValue.replace(extension, '')}${extension}`,
+          ),
         );
       },
     });
