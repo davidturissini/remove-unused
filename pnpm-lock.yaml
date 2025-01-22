@@ -106,7 +106,7 @@ importers:
   packages/remove-unused:
     dependencies:
       '@remove-unused/engine':
-        specifier: 0.0.11
+        specifier: 0.0.12
         version: link:../engine
       yargs:
         specifier: 17.7.2
@@ -4752,6 +4752,7 @@ packages:
   wrangler@3.102.0:
     resolution: {integrity: sha512-Za4DstbS3+/hu+///K/4dFFeV6XbPBAGp7NCnVajchxRTwEPTdbO5eezH0HLJPMHK6G/0yIzyhlEMnyg4YzHAA==}
     engines: {node: '>=16.17.0'}
+    deprecated: Downgrade to 3.99.0
     hasBin: true
     peerDependencies:
       '@cloudflare/workers-types': ^4.20241230.0
