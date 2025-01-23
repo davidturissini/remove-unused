@@ -23,12 +23,17 @@ describe('analyze', () => {
         '/test/src/unused.ts': '//unused',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual(['/test/src/unused.ts']);
+      expect(packages).toEqual([
+        expect.objectContaining({
+          name: 'unused-typescript-file',
+          unusedFiles: ['/test/src/unused.ts'],
+        }),
+      ]);
     });
   });
 
@@ -44,12 +49,17 @@ describe('analyze', () => {
         '/test/src/unused.js': '//unused',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual(['/test/src/unused.js']);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: ['/test/src/unused.js'],
+        },
+      ]);
     });
   });
 
@@ -67,12 +77,17 @@ describe('analyze', () => {
           '/test/src/main.ts': '//used!',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -91,12 +106,17 @@ describe('analyze', () => {
           '/test/src/types.ts': '//used!',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -115,12 +135,17 @@ describe('analyze', () => {
           '/test/index.js': '//used!',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not error when exports is nested map', async () => {
@@ -139,12 +164,17 @@ describe('analyze', () => {
           '/test/index.js': '//used!',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not error when exports is deeply nested map', async () => {
@@ -165,12 +195,17 @@ describe('analyze', () => {
           '/test/index.js': '//used!',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
   });
@@ -190,12 +225,17 @@ describe('analyze', () => {
           '/test/src/utils.js': '//used!',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       describe('with js extension', () => {
@@ -212,12 +252,17 @@ describe('analyze', () => {
             '/test/src/utils.js': '//used!',
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
       });
     });
@@ -237,12 +282,17 @@ describe('analyze', () => {
         '/test/src/utils.js': '//used!',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
   });
 
@@ -263,12 +313,17 @@ describe('analyze', () => {
         '/test/src/used.ts': '//unused',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
   });
 
@@ -295,12 +350,17 @@ describe('analyze', () => {
           `,
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not mark imported d.ts file as unused if tsconfig is present', async () => {
@@ -325,12 +385,17 @@ describe('analyze', () => {
           `,
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
   });
@@ -354,12 +419,17 @@ describe('analyze', () => {
         '/test/src/folder/index.ts': `// used`,
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     it('should not mark aliased imports that have index.js files as unused', async () => {
@@ -396,12 +466,17 @@ describe('analyze', () => {
         `,
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     it('should mark imports from config as used', async () => {
@@ -424,7 +499,7 @@ describe('analyze', () => {
         '/test/file.mjs': '//used',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: async () => {
           return {
@@ -433,7 +508,12 @@ describe('analyze', () => {
         },
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     it('ignore ? from import statements', async () => {
@@ -456,7 +536,7 @@ describe('analyze', () => {
         '/test/file.mjs': '//used',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: async () => {
           return {
@@ -465,7 +545,12 @@ describe('analyze', () => {
         },
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     it('should not mark ts imports without extension as unused', async () => {
@@ -486,12 +571,17 @@ describe('analyze', () => {
         '/test/src/tsfile.ts': '//used',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     it('should not mark filenames with dots as unused', async () => {
@@ -512,12 +602,17 @@ describe('analyze', () => {
         '/test/src/ts.file.ts': '//used',
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
   });
 
@@ -540,12 +635,17 @@ describe('analyze', () => {
         '/test/src/file.ts': `// used`,
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     it('should not mark files referenced in splat export statements as unused', async () => {
@@ -566,12 +666,17 @@ describe('analyze', () => {
         '/test/src/file.ts': `// used`,
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
   });
 
@@ -592,11 +697,16 @@ describe('analyze', () => {
           '/test/src/used.test.js': '// used by jest',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not mark "setupFilesAfterEnv" files as unused', async () => {
@@ -617,11 +727,16 @@ describe('analyze', () => {
           '/test/jest/customMatchers.js': '// used by jest',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not mark jest.config.js files as unused', async () => {
@@ -640,12 +755,17 @@ describe('analyze', () => {
           '/test/jest.config.js': '// used by jest',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not mark files from "testMatch" as unused', async () => {
@@ -670,12 +790,17 @@ describe('analyze', () => {
           '/test/foo.test.ts': '// used',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -695,12 +820,17 @@ describe('analyze', () => {
           '/test/scripts/used.js': '// used by jest',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -735,12 +865,17 @@ describe('analyze', () => {
             '/test/demo/pages/theme.js': '// used by next',
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
       });
 
@@ -766,12 +901,17 @@ describe('analyze', () => {
               [`/test/${configFileName}`]: '// used by next',
             });
 
-            const { unusedFiles } = await analyze({
+            const { packages } = await analyze({
               cwd: '/test',
               import: mockImport,
             });
 
-            expect(unusedFiles).toEqual([]);
+            expect(packages).toEqual([
+              {
+                name: 'unused-typescript-file',
+                unusedFiles: [],
+              },
+            ]);
           },
         );
 
@@ -835,13 +975,18 @@ describe('analyze', () => {
             '/test/src/pages/Foo.mdx': '// presumably used by next?',
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
 
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
 
         it('should not mark MDX files in pages dir as unused when config is mjs', async () => {
@@ -872,7 +1017,7 @@ import Foo from '@/components/Foo'
             `,
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: async (path) => {
               if (path === '/test/next.config.mjs') {
@@ -886,7 +1031,12 @@ import Foo from '@/components/Foo'
             },
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
 
         it('should mark files in pages dir as unused when pageExtensions does not contain mdx', async () => {
@@ -911,13 +1061,17 @@ import Foo from '@/components/Foo'
             '/test/src/pages/Foo.mdx': '// presumably used by next?',
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
 
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual(['/test/src/pages/Foo.mdx']);
+          expect(packages).toEqual([
+            expect.objectContaining({
+              unusedFiles: ['/test/src/pages/Foo.mdx'],
+            }),
+          ]);
         });
 
         it('should not mark component imported in MDX file as unused', async () => {
@@ -959,12 +1113,17 @@ import Foo from '@/components/Foo'
             `,
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
       });
     });
@@ -985,11 +1144,16 @@ import Foo from '@/components/Foo'
           '/test/tailwind.config.js': '// used by jest',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -1009,11 +1173,16 @@ import Foo from '@/components/Foo'
           '/test/prettier.config.js': '// used by jest',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -1052,12 +1221,17 @@ import Foo from '@/components/Foo'
             `,
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
 
         it('should not report aliased JS path as unused', async () => {
@@ -1093,12 +1267,17 @@ import Foo from '@/components/Foo'
             `,
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
 
         it('should not report files referenced alongside lib imports as unused', async () => {
@@ -1135,36 +1314,48 @@ import Foo from '@/components/Foo'
             `,
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
       });
     });
 
     describe('size-limit', () => {
-      it('should not mark size-limit config as unused', async () => {
-        mock({
-          '/test/package.json': JSON.stringify({
-            name: 'unused-typescript-file',
-            version: '0.0.1',
-            dependencies: {
-              eslint: '0.0.0',
+      describe.each(['.size-limit.js'])('%s config', (configFile) => {
+        it(`should not mark ${configFile} config as unused`, async () => {
+          mock({
+            '/test/package.json': JSON.stringify({
+              name: 'unused-typescript-file',
+              version: '0.0.1',
+              dependencies: {
+                'size-limit': '0.0.0',
+              },
+              private: true,
+            }),
+            [`/test/${configFile}`]: '// eslint config',
+          });
+
+          const { packages } = await analyze({
+            cwd: '/test',
+            import: mockImport,
+          });
+
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
             },
-            private: true,
-          }),
-          '/test/.eslintrc.js': '// eslint config',
+          ]);
         });
-
-        const { unusedFiles } = await analyze({
-          cwd: '/test',
-          import: mockImport,
-        });
-
-        expect(unusedFiles).toEqual([]);
       });
     });
 
@@ -1185,12 +1376,17 @@ import Foo from '@/components/Foo'
               [`/test/${configFile}`]: '// eslint config',
             });
 
-            const { unusedFiles } = await analyze({
+            const { packages } = await analyze({
               cwd: '/test',
               import: mockImport,
             });
 
-            expect(unusedFiles).toEqual([]);
+            expect(packages).toEqual([
+              {
+                name: 'unused-typescript-file',
+                unusedFiles: [],
+              },
+            ]);
           });
 
           it(`should not mark ${configFile} as unused when included in monorepo root`, async () => {
@@ -1210,12 +1406,21 @@ import Foo from '@/components/Foo'
               [`/test/packages/foo/${configFile}`]: '// eslint config',
             });
 
-            const { unusedFiles } = await analyze({
+            const { packages } = await analyze({
               cwd: '/test',
               import: mockImport,
             });
 
-            expect(unusedFiles).toEqual([]);
+            expect(packages).toEqual([
+              {
+                name: 'unused-typescript-file',
+                unusedFiles: [],
+              },
+              {
+                name: 'child',
+                unusedFiles: [],
+              },
+            ]);
           });
         },
       );
@@ -1235,12 +1440,17 @@ import Foo from '@/components/Foo'
           '/test/postcss.config.js': `//postcss config`,
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -1258,12 +1468,17 @@ import Foo from '@/components/Foo'
           '/test/foo.test.js': '// test file',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not mark foo.test.ts as unused', async () => {
@@ -1279,12 +1494,17 @@ import Foo from '@/components/Foo'
           '/test/foo.test.ts': '// test file',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -1307,12 +1527,17 @@ import Foo from '@/components/Foo'
             '/test/rollup.used.config.ts': '// test file',
           });
 
-          const { unusedFiles } = await analyze({
+          const { packages } = await analyze({
             cwd: '/test',
             import: mockImport,
           });
 
-          expect(unusedFiles).toEqual([]);
+          expect(packages).toEqual([
+            {
+              name: 'unused-typescript-file',
+              unusedFiles: [],
+            },
+          ]);
         });
 
         describe('rollup entry files', () => {
@@ -1335,7 +1560,7 @@ import Foo from '@/components/Foo'
                 '/test/rollup.config.ts': ``,
               });
 
-              const { unusedFiles } = await analyze({
+              const { packages } = await analyze({
                 cwd: '/test',
                 import: async () => {
                   return {
@@ -1348,7 +1573,12 @@ import Foo from '@/components/Foo'
                 },
               });
 
-              expect(unusedFiles).toEqual([]);
+              expect(packages).toEqual([
+                {
+                  name: 'unused-typescript-file',
+                  unusedFiles: [],
+                },
+              ]);
             });
           });
         });
@@ -1373,12 +1603,17 @@ import Foo from '@/components/Foo'
               '/test/vite.config.ts': '// test file',
             });
 
-            const { unusedFiles } = await analyze({
+            const { packages } = await analyze({
               cwd: '/test',
               import: mockImport,
             });
 
-            expect(unusedFiles).toEqual([]);
+            expect(packages).toEqual([
+              {
+                name: 'unused-typescript-file',
+                unusedFiles: [],
+              },
+            ]);
           });
 
           it(`should not mark ${configFile} as unused when included in monorepo root`, async () => {
@@ -1398,12 +1633,21 @@ import Foo from '@/components/Foo'
               [`/test/packages/foo/${configFile}`]: '// vitest config',
             });
 
-            const { unusedFiles } = await analyze({
+            const { packages } = await analyze({
               cwd: '/test',
               import: mockImport,
             });
 
-            expect(unusedFiles).toEqual([]);
+            expect(packages).toEqual([
+              {
+                name: 'unused-typescript-file',
+                unusedFiles: [],
+              },
+              {
+                name: 'child',
+                unusedFiles: [],
+              },
+            ]);
           });
         },
       );
@@ -1421,12 +1665,17 @@ import Foo from '@/components/Foo'
           '/test/src/used.test.ts': '// test file',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not mark vitest setup file as unused', async () => {
@@ -1450,7 +1699,7 @@ import Foo from '@/components/Foo'
           '/test/vitest.setup.ts': '// used',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: async () => {
             return {
@@ -1465,7 +1714,12 @@ import Foo from '@/components/Foo'
           },
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
 
       it('should not mark vitest setup files from config files with on default export as unused', async () => {
@@ -1489,7 +1743,7 @@ import Foo from '@/components/Foo'
           '/test/vitest.setup.ts': '// used',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: async () => {
             return {
@@ -1502,7 +1756,12 @@ import Foo from '@/components/Foo'
           },
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
   });
@@ -1522,13 +1781,18 @@ import Foo from '@/components/Foo'
         `,
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
 
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     it('should not include any files from node_modules', async () => {
@@ -1545,13 +1809,18 @@ import Foo from '@/components/Foo'
         `,
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
 
         import: mockImport,
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'unused-typescript-file',
+          unusedFiles: [],
+        },
+      ]);
     });
 
     describe('unused ts file in node_modules', () => {
@@ -1569,12 +1838,17 @@ import Foo from '@/components/Foo'
           `,
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -1600,13 +1874,18 @@ import Foo from '@/components/Foo'
         `,
       });
 
-      const { unusedFiles } = await analyze({
+      const { packages } = await analyze({
         cwd: '/test',
         import: mockImport,
         packages: ['child'],
       });
 
-      expect(unusedFiles).toEqual([]);
+      expect(packages).toEqual([
+        {
+          name: 'child',
+          unusedFiles: [],
+        },
+      ]);
     });
   });
 
@@ -1631,13 +1910,22 @@ import Foo from '@/components/Foo'
           '/test/packages/foo/index.js': '// main file for package',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
 
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+          {
+            name: 'child',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -1664,12 +1952,21 @@ import Foo from '@/components/Foo'
           '/test/packages/foo/jest.config.js': '// main file for package',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+          {
+            name: 'child',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
 
@@ -1693,12 +1990,21 @@ import Foo from '@/components/Foo'
             '// unused file in another package',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual(['/test/packages/another/index.js']);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+          {
+            name: 'child-2',
+            unusedFiles: ['/test/packages/another/index.js'],
+          },
+        ]);
       });
     });
 
@@ -1730,12 +2036,21 @@ import Foo from '@/components/Foo'
             `,
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+          {
+            name: 'child-2',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
   });
@@ -1769,13 +2084,18 @@ import Foo from '@/components/Foo'
             '// unused file in another package',
         });
 
-        const { unusedFiles } = await analyze({
+        const { packages } = await analyze({
           cwd: '/test',
           import: mockImport,
           packages: ['child'],
         });
 
-        expect(unusedFiles).toEqual([]);
+        expect(packages).toEqual([
+          {
+            name: 'child',
+            unusedFiles: [],
+          },
+        ]);
       });
     });
   });

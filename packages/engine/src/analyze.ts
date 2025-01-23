@@ -27,6 +27,8 @@ import { plugin as postcssPlugin } from './plugins/postcss.js';
 import { plugin as rollupPlugin } from './plugins/rollup.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 import { plugin as vitestPlugin } from './plugins/vitest.js';
+import { plugin as sizeLimitPlugin } from './plugins/size-limit.js';
+
 import { parseWorkspace } from './workspace.js';
 import type { Plugin, PathResolver } from './plugin.js';
 import {
@@ -48,6 +50,7 @@ const pluginsRegistry = [
   eslintPlugin,
   bntPlugin,
   rollupPlugin,
+  sizeLimitPlugin,
 ] as const satisfies Plugin[];
 
 type Params = {
@@ -180,7 +183,7 @@ function resolveRequireStatements(
         const firstArgument = requireExpression.arguments[0];
 
         if (firstArgument.expression.type !== 'StringLiteral') {
-          throw new Error('dynamic require() statement');
+          throw new Error(`dynamic require() statement: "${sourceFilePath}"`);
         }
 
         const argValue = firstArgument.expression.value;
@@ -315,6 +318,9 @@ async function walkFiles(packageDef: PackageDefinition, state: State) {
         }
       });
     } catch (e) {
+      if (/dynamic require/.test(`${e}`)) {
+        return;
+      }
       console.log(`Error when analyzing "${path}"`);
       throw e;
       // noop
@@ -385,9 +391,13 @@ export async function analyze({
           return filteredPackages[packageName] === true;
         });
 
-  const unusedFiles: string[] = [];
+  const packages: Array<{
+    name: string;
+    unusedFiles: string[];
+  }> = [];
 
   for (const packageDef of analyzePackages) {
+    const unusedFiles: string[] = [];
     for (const createPlugin of pluginsRegistry) {
       const plugin = await createPlugin({ packageDef, state });
       if (plugin === undefined) {
@@ -399,9 +409,14 @@ export async function analyze({
     getUnusedFileReferences(packageDef).forEach((filePath) => {
       unusedFiles.push(filePath);
     });
+
+    packages.push({
+      name: packageDef.name,
+      unusedFiles,
+    });
   }
 
   return {
-    unusedFiles,
+    packages,
   };
 }
