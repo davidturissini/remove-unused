@@ -8,7 +8,7 @@ export type ImportFn = typeof tsImport;
 type Params = {
   path: string;
   moduleType: 'module' | 'commonjs';
-  require?: RequireFn;
+  require?: (path: string) => unknown;
   import?: ImportFn;
 };
 

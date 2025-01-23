@@ -34,6 +34,7 @@ import type { Plugin, PathResolver } from './plugin.js';
 import {
   addFileReference,
   getUnusedFileReferences,
+  isPackageFile,
   PackageDefinition,
 } from './package.js';
 
@@ -57,10 +58,11 @@ type Params = {
   cwd: string;
   packages?: string[];
   import?: (path: string) => Promise<unknown>;
+  require?: (path: string) => unknown;
 };
 
 export type State = {
-  filteredPackages: Record<string, true>;
+  packages: PackageDefinition[];
   import(path: string): Promise<unknown>;
   resolvePath(path: string): string | undefined;
   addResolver(resolver: PathResolver): void;
@@ -90,6 +92,11 @@ function walk(
     case 'ExportAllDeclaration':
     case 'ExportNamedDeclaration': {
       visitor.exportStatement(exp);
+      break;
+    }
+    case 'AssignmentExpression': {
+      const { right } = exp;
+      walk(right, visitor);
       break;
     }
     case 'VariableDeclaration': {
@@ -188,6 +195,7 @@ function resolveRequireStatements(
 
         const argValue = firstArgument.expression.value;
         const extension = extname(argValue) || '.js';
+
         staticRequireStatements.push(
           pathJoin(
             dirname(sourceFilePath),
@@ -311,10 +319,21 @@ async function walkFiles(packageDef: PackageDefinition, state: State) {
         collectFileReferences(path, ast, state);
 
       [...importStatements, ...staticRequireExpressions].forEach((path) => {
-        addFileReference(packageDef, path);
+        const belongsTo =
+          isPackageFile(packageDef, path) === false
+            ? state.packages.find((def) => {
+                return isPackageFile(def, path);
+              })
+            : packageDef;
+
+        if (belongsTo === undefined) {
+          return;
+        }
+
+        addFileReference(belongsTo, path);
         const extName = extname(path);
         if (extName === '.js' && existsSync(path.replace('.js', '.d.ts'))) {
-          addFileReference(packageDef, path.replace('.js', '.d.ts'));
+          addFileReference(belongsTo, path.replace('.js', '.d.ts'));
         }
       });
     } catch (e) {
@@ -331,6 +350,7 @@ async function walkFiles(packageDef: PackageDefinition, state: State) {
 export async function analyze({
   cwd,
   import: importParam,
+  require: requireParam,
   packages: packageFilter = [],
 }: Params) {
   const resolvers: PathResolver[] = [];
@@ -342,13 +362,32 @@ export async function analyze({
     },
     {} as Record<string, true>,
   );
+
+  const workspaceDef = await parseWorkspace({
+    cwd,
+  });
+
+  const allPackages = [workspaceDef, ...workspaceDef.workspaces];
+  const analyzePackages =
+    packageFilter.length === 0
+      ? allPackages
+      : allPackages.filter(({ name: packageName }) => {
+          return filteredPackages[packageName] === true;
+        });
+
+  const packages: Array<{
+    name: string;
+    unusedFiles: string[];
+  }> = [];
+
   const state: State = {
-    filteredPackages,
+    packages: analyzePackages,
     async import(path) {
       try {
         return await importFile({
           path,
           moduleType: workspaceDef.moduleType,
+          require: requireParam,
           import: importParam,
         });
       } catch (e) {
@@ -378,26 +417,7 @@ export async function analyze({
     },
   };
 
-  const workspaceDef = await parseWorkspace({
-    cwd,
-    state,
-  });
-
-  const allPackages = [workspaceDef, ...workspaceDef.workspaces];
-  const analyzePackages =
-    packageFilter.length === 0
-      ? allPackages
-      : allPackages.filter(({ name: packageName }) => {
-          return filteredPackages[packageName] === true;
-        });
-
-  const packages: Array<{
-    name: string;
-    unusedFiles: string[];
-  }> = [];
-
   for (const packageDef of analyzePackages) {
-    const unusedFiles: string[] = [];
     for (const createPlugin of pluginsRegistry) {
       const plugin = await createPlugin({ packageDef, state });
       if (plugin === undefined) {
@@ -406,6 +426,10 @@ export async function analyze({
       plugins.push(plugin);
     }
     await walkFiles(packageDef, state);
+  }
+
+  for (const packageDef of analyzePackages) {
+    const unusedFiles: string[] = [];
     getUnusedFileReferences(packageDef).forEach((filePath) => {
       unusedFiles.push(filePath);
     });
@@ -417,6 +441,11 @@ export async function analyze({
   }
 
   return {
-    packages,
+    packages: packages.sort((a, b) => {
+      if (a.name > b.name) {
+        return 1;
+      }
+      return -1;
+    }),
   };
 }

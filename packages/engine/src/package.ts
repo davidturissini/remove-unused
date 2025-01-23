@@ -155,6 +155,10 @@ export function addFileReference(def: PackageDefinition, filePath: string) {
   def.referencedFiles[filePath] = true;
 }
 
+export function isPackageFile(def: PackageDefinition, path: string) {
+  return def.files[path] !== undefined;
+}
+
 export function getUnusedFileReferences(def: PackageDefinition) {
   const { files, referencedFiles } = def;
   return Object.keys(files).filter((filePath) => {

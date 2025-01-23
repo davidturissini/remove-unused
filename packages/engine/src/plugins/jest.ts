@@ -19,9 +19,12 @@ const packageJsonJestSchema = z.object({
   jest: jestConfigSchema.optional(),
 });
 
-const jestSchemaImported = z.object({
-  default: jestConfigSchema,
-});
+const jestSchemaImported = z.union([
+  z.object({
+    default: jestConfigSchema,
+  }),
+  jestConfigSchema,
+]);
 
 async function loadConfig(
   { packageJson, cwd }: PackageDefinition,
@@ -39,12 +42,17 @@ async function loadConfig(
   }
 
   const config = await state.import(configFile);
+
   const parsedImportedConfig = jestSchemaImported.safeParse(config);
   if (parsedImportedConfig.success === false) {
     return;
   }
 
-  return parsedImportedConfig.data.default;
+  if ('default' in parsedImportedConfig.data) {
+    return parsedImportedConfig.data.default;
+  }
+
+  return parsedImportedConfig.data;
 }
 
 export const plugin = createPlugin(async ({ state, packageDef }) => {
@@ -77,6 +85,10 @@ export const plugin = createPlugin(async ({ state, packageDef }) => {
   return {
     name: 'jest',
     fileBelongsTo: function fileBelongsTo(path: string) {
+      if (/__mocks__/.test(path)) {
+        return true;
+      }
+
       if (config?.testMatch === undefined) {
         const fileMatch = new RegExp('.test.js');
         return fileMatch.test(path);
