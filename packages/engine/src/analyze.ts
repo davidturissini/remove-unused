@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join as pathJoin, extname, dirname } from 'node:path';
 import {
   ModuleItem,
@@ -7,11 +7,12 @@ import {
   type CallExpression,
   type Expression,
   type ImportDeclaration,
-  ExportNamedDeclaration,
+  type ExportNamedDeclaration,
+  type ExportAllDeclaration,
 } from '@swc/core';
 import { remark } from 'remark';
 import remarkMdx from 'remark-mdx';
-import ignoreWalk from 'ignore-walk';
+import resolve from 'resolve';
 
 import { importFile } from './importer.js';
 import { plugin as bntPlugin } from './plugins/bnt.js';
@@ -26,12 +27,13 @@ import { plugin as postcssPlugin } from './plugins/postcss.js';
 import { plugin as rollupPlugin } from './plugins/rollup.js';
 import { plugin as packageJsonPlugin } from './plugins/package-json.js';
 import { plugin as vitestPlugin } from './plugins/vitest.js';
-import {
-  type PackageDefinition,
-  readPackageJson,
-  type WorkspaceDefinition,
-} from './package.js';
+import { parseWorkspace } from './workspace.js';
 import type { Plugin, PathResolver } from './plugin.js';
+import {
+  addFileReference,
+  getUnusedFileReferences,
+  PackageDefinition,
+} from './package.js';
 
 const pluginsRegistry = [
   vitestPlugin,
@@ -50,15 +52,15 @@ const pluginsRegistry = [
 
 type Params = {
   cwd: string;
+  packages?: string[];
   import?: (path: string) => Promise<unknown>;
 };
 
 export type State = {
+  filteredPackages: Record<string, true>;
   import(path: string): Promise<unknown>;
   resolvePath(path: string): string | undefined;
   addResolver(resolver: PathResolver): void;
-  isReferenced(path: string): boolean;
-  addRef(path: string): void;
   isLibraryFile(path: string): boolean;
 };
 
@@ -67,104 +69,13 @@ type FileDef = {
   source: string;
 };
 
-function parsePackage({
-  parentWorkspace,
-  cwd,
-}: {
-  parentWorkspace: WorkspaceDefinition | null;
-  cwd: string;
-}): PackageDefinition {
-  const packageJson = readPackageJson({ cwd });
-
-  return {
-    cwd,
-    packageJson,
-    parentWorkspace,
-  };
-}
-
-function createFileDef(filePath: string) {
-  const extName = extname(filePath);
-  switch (extName) {
-    case '.mdx': {
-      return {
-        type: 'mdx',
-        source: readFileSync(filePath).toString(),
-      } as const;
-    }
-    case '.js':
-    case '.ts':
-    case '.jsx':
-    case '.tsx':
-    case '.mjs':
-    case '.cjs': {
-      if (statSync(filePath).isDirectory() === true) {
-        return;
-      }
-      return {
-        type: 'ecmascript',
-        source: readFileSync(filePath).toString(),
-      } as const;
-    }
-  }
-}
-
-async function parseWorkspace({
-  cwd,
-}: {
-  cwd: string;
-  state: State;
-}): Promise<WorkspaceDefinition> {
-  const packageJson = readPackageJson({ cwd });
-  const walked = await ignoreWalk({
-    path: cwd,
-    ignoreFiles: ['.gitignore'],
-    includeEmpty: true,
-  });
-
-  const files: WorkspaceDefinition['files'] = {};
-  walked.forEach((filePath) => {
-    const fullPath = pathJoin(cwd, filePath);
-    const def = createFileDef(fullPath);
-    if (def === undefined) {
-      return;
-    }
-    files[fullPath] = def;
-  });
-
-  const { workspaces } = packageJson;
-
-  const packages: PackageDefinition[] = [];
-  const workspace: WorkspaceDefinition = {
-    packages,
-    packageJson,
-    cwd,
-    files,
-    moduleType: packageJson.type === undefined ? 'commonjs' : packageJson.type,
-    parentWorkspace: null,
-  };
-
-  const fullPaths = workspaces.map((pathGlob) => {
-    return pathJoin(cwd, pathGlob);
-  });
-
-  for (const packagePath of fullPaths) {
-    packages.push(
-      parsePackage({
-        cwd: packagePath,
-        parentWorkspace: workspace,
-      }),
-    );
-  }
-
-  return workspace;
-}
-
 function walk(
   exp: ModuleItem | Expression,
   visitor: {
     require: (exp: CallExpression) => void;
-    exportStatement: (exp: ExportNamedDeclaration) => void;
+    exportStatement: (
+      exp: ExportNamedDeclaration | ExportAllDeclaration,
+    ) => void;
     importStatement: (exp: ImportDeclaration) => void;
   },
 ) {
@@ -173,6 +84,7 @@ function walk(
       visitor.importStatement(exp);
       break;
     }
+    case 'ExportAllDeclaration':
     case 'ExportNamedDeclaration': {
       visitor.exportStatement(exp);
       break;
@@ -181,7 +93,7 @@ function walk(
       const { declarations } = exp;
       declarations.forEach((decl) => {
         const { init } = decl;
-        if (init !== undefined) {
+        if (init !== undefined && init !== null) {
           walk(init, visitor);
         }
       });
@@ -204,38 +116,17 @@ const IMPORT_EXTENSIONS = ['.ts', '.js', '.mjs', '.tsx', '.jsx'];
 function resolveImportPath(sourceDirectory: string, importPath: string) {
   const noQueryParam = importPath.split('?')[0];
   const extension = extname(noQueryParam);
-  let normalized: string = pathJoin(
-    sourceDirectory,
-    `${noQueryParam.replace(extension, '')}${extension}`,
-  );
+  const normalized: string = `${noQueryParam.replace(extension, '')}${extension}`;
 
-  // An import with no extension
-  if (extension === '') {
-    // check if there is an index file
-    for (const indexFileName of ['index.ts', 'index.js', 'index.mjs']) {
-      const indexFilePath = pathJoin(
-        sourceDirectory,
-        noQueryParam,
-        indexFileName,
-      );
-      if (existsSync(indexFilePath)) {
-        return indexFilePath;
-      }
-    }
-
-    const normalizedWithExtension = IMPORT_EXTENSIONS.map((ext) => {
-      const path = `${noQueryParam.replace(ext, '')}${ext}`;
-      return pathJoin(sourceDirectory, path);
-    }).find((absPath) => {
-      return existsSync(absPath);
+  try {
+    return resolve.sync(normalized, {
+      extensions: IMPORT_EXTENSIONS,
+      basedir: sourceDirectory,
     });
-
-    if (normalizedWithExtension !== undefined) {
-      normalized = normalizedWithExtension;
-    }
+  } catch {
+    // ignore, probably trying to resolve a library
+    return;
   }
-
-  return normalized;
 }
 
 function resolveRequireStatements(
@@ -256,7 +147,9 @@ function resolveRequireStatements(
               dirname(sourceFilePath),
               exportStatement.source.value,
             );
-            importStatements.push(resolvedFilePath);
+            if (resolvedFilePath !== undefined) {
+              importStatements.push(resolvedFilePath);
+            }
             return;
           }
           importStatements.push(resolved);
@@ -270,7 +163,9 @@ function resolveRequireStatements(
               dirname(sourceFilePath),
               importStatement.source.value,
             );
-            importStatements.push(resolvedFilePath);
+            if (resolvedFilePath !== undefined) {
+              importStatements.push(resolvedFilePath);
+            }
             return;
           }
           importStatements.push(resolved);
@@ -396,19 +291,15 @@ function collectFileReferences(path: string, ast: AstDef, state: State) {
   }
 }
 
-async function walkFiles(
-  { files: packageFiles }: Pick<WorkspaceDefinition, 'files'>,
-  state: State,
-) {
+async function walkFiles(packageDef: PackageDefinition, state: State) {
+  const { files: packageFiles } = packageDef;
+
   const filePaths = Object.keys(packageFiles) as Array<
     keyof typeof packageFiles
   >;
   filePaths.forEach((path) => {
-    if (
-      state.isReferenced(path) === false &&
-      state.isLibraryFile(path) === true
-    ) {
-      state.addRef(path);
+    if (state.isLibraryFile(path) === true) {
+      addFileReference(packageDef, path);
     }
 
     try {
@@ -417,29 +308,48 @@ async function walkFiles(
         collectFileReferences(path, ast, state);
 
       [...importStatements, ...staticRequireExpressions].forEach((path) => {
-        state.addRef(path);
+        addFileReference(packageDef, path);
         const extName = extname(path);
         if (extName === '.js' && existsSync(path.replace('.js', '.d.ts'))) {
-          state.addRef(path.replace('.js', '.d.ts'));
+          addFileReference(packageDef, path.replace('.js', '.d.ts'));
         }
       });
-    } catch {
+    } catch (e) {
+      console.log(`Error when analyzing "${path}"`);
+      throw e;
       // noop
     }
   });
 }
 
-export async function analyze({ cwd, import: importParam }: Params) {
-  const usedFiles: Record<string, true> = {};
+export async function analyze({
+  cwd,
+  import: importParam,
+  packages: packageFilter = [],
+}: Params) {
   const resolvers: PathResolver[] = [];
   const plugins: Plugin[] = [];
+  const filteredPackages = packageFilter.reduce(
+    (acc, packageName) => {
+      acc[packageName] = true;
+      return acc;
+    },
+    {} as Record<string, true>,
+  );
   const state: State = {
+    filteredPackages,
     async import(path) {
-      return await importFile({
-        path,
-        moduleType: workspaceDef.moduleType,
-        import: importParam,
-      });
+      try {
+        return await importFile({
+          path,
+          moduleType: workspaceDef.moduleType,
+          import: importParam,
+        });
+      } catch (e) {
+        process.stdout.write(`Error trying to import "${path}": ${e}`);
+        process.stdout.write('\n');
+        return;
+      }
     },
     resolvePath: (path: string) => {
       for (const plugin of plugins) {
@@ -452,9 +362,6 @@ export async function analyze({ cwd, import: importParam }: Params) {
     addResolver: (resolver: PathResolver) => {
       resolvers.push(resolver);
     },
-    isReferenced(path) {
-      return usedFiles[path] === true;
-    },
     isLibraryFile(path) {
       for (const plugin of plugins) {
         if (plugin.fileBelongsTo?.(path) === true) {
@@ -463,16 +370,24 @@ export async function analyze({ cwd, import: importParam }: Params) {
       }
       return false;
     },
-    addRef(path) {
-      usedFiles[path] = true;
-    },
   };
 
-  const workspaceDef = await parseWorkspace({ cwd, state });
-  const { files: sourceFiles } = workspaceDef;
+  const workspaceDef = await parseWorkspace({
+    cwd,
+    state,
+  });
 
-  const flatPackages = [workspaceDef, ...workspaceDef.packages];
-  for (const packageDef of flatPackages) {
+  const allPackages = [workspaceDef, ...workspaceDef.workspaces];
+  const analyzePackages =
+    packageFilter.length === 0
+      ? allPackages
+      : allPackages.filter(({ name: packageName }) => {
+          return filteredPackages[packageName] === true;
+        });
+
+  const unusedFiles: string[] = [];
+
+  for (const packageDef of analyzePackages) {
     for (const createPlugin of pluginsRegistry) {
       const plugin = await createPlugin({ packageDef, state });
       if (plugin === undefined) {
@@ -480,15 +395,11 @@ export async function analyze({ cwd, import: importParam }: Params) {
       }
       plugins.push(plugin);
     }
+    await walkFiles(packageDef, state);
+    getUnusedFileReferences(packageDef).forEach((filePath) => {
+      unusedFiles.push(filePath);
+    });
   }
-
-  await walkFiles(workspaceDef, state);
-
-  const unusedFiles = Object.keys(sourceFiles).filter(
-    (path: keyof typeof sourceFiles) => {
-      return usedFiles[path] === undefined;
-    },
-  );
 
   return {
     unusedFiles,

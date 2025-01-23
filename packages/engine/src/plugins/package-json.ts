@@ -1,7 +1,7 @@
 import { join as pathJoin, extname } from 'node:path';
 import { existsSync } from 'node:fs';
 import { createPlugin } from '../plugin.js';
-import { PackageJsonSchema } from '../package.js';
+import { addFileReference, PackageJsonSchema } from '../package.js';
 
 function getPackageEntryPoints(cwd: string, packageJson: PackageJsonSchema) {
   const { main, types, exports } = packageJson;
@@ -37,18 +37,17 @@ function getPackageEntryPoints(cwd: string, packageJson: PackageJsonSchema) {
   return entryPoints;
 }
 
-export const plugin = createPlugin(
-  ({ packageDef: { packageJson, cwd }, state }) => {
-    const entryPoints = getPackageEntryPoints(cwd, packageJson);
+export const plugin = createPlugin(({ packageDef }) => {
+  const { packageJson, cwd } = packageDef;
+  const entryPoints = getPackageEntryPoints(cwd, packageJson);
 
-    Object.keys(entryPoints).forEach((key) => {
-      state.addRef(key);
-      const extName = extname(key);
-      if (extName === '.js' && existsSync(key.replace('.js', '.d.ts'))) {
-        state.addRef(key.replace('.js', '.d.ts'));
-      }
-    });
+  Object.keys(entryPoints).forEach((key) => {
+    addFileReference(packageDef, key);
+    const extName = extname(key);
+    if (extName === '.js' && existsSync(key.replace('.js', '.d.ts'))) {
+      addFileReference(packageDef, key.replace('.js', '.d.ts'));
+    }
+  });
 
-    return undefined;
-  },
-);
+  return undefined;
+});

@@ -16,9 +16,16 @@ export async function main() {
           default: process.cwd(),
         });
       },
-      async ({ cwd }: { cwd: string }) => {
+      async ({
+        cwd,
+        package: packageFilter,
+      }: {
+        cwd: string;
+        package: string[];
+      }) => {
         const results = await analyze({
           cwd,
+          packages: packageFilter,
         });
         process.stdout.write(JSON.stringify(results, null, 2));
       },
@@ -33,12 +40,19 @@ export async function main() {
           default: process.cwd(),
         });
       },
-      async ({ cwd }: { cwd: string }) => {
+      async (args: { cwd: string; packageFilter: string[] }) => {
+        const { cwd, packageFilter } = args;
         const results = await analyze({
           cwd,
+          packages: packageFilter,
         });
         process.stdout.write(JSON.stringify(results.unusedFiles, null, 2));
       },
     )
+    .option('package', {
+      alias: 'p',
+      type: 'array',
+      description: 'filter packages',
+    })
     .help().argv;
 }
