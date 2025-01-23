@@ -1,7 +1,8 @@
 import { join as pathJoin } from 'node:path';
 import { createPlugin } from '../plugin.js';
+import { addFileReference } from '../package.js';
 
-export const plugin = createPlugin(({ state, packageDef }) => {
+export const plugin = createPlugin(({ packageDef }) => {
   const { packageJson, cwd } = packageDef;
   const { dependencies, devDependencies } = packageJson;
   if (
@@ -12,5 +13,5 @@ export const plugin = createPlugin(({ state, packageDef }) => {
   }
 
   const config = pathJoin(cwd, 'postcss.config.js');
-  state.addRef(config);
+  addFileReference(packageDef, config);
 });

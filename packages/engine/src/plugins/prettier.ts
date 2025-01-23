@@ -1,17 +1,17 @@
 import { join as pathJoin } from 'node:path';
 import { createPlugin } from '../plugin.js';
+import { addFileReference } from '../package.js';
 
-export const plugin = createPlugin(
-  ({ state, packageDef: { packageJson, cwd } }) => {
-    const { dependencies, devDependencies } = packageJson;
-    if (
-      dependencies?.prettier === undefined &&
-      devDependencies?.prettier === undefined
-    ) {
-      return undefined;
-    }
+export const plugin = createPlugin(({ packageDef }) => {
+  const { packageJson, cwd } = packageDef;
+  const { dependencies, devDependencies } = packageJson;
+  if (
+    dependencies?.prettier === undefined &&
+    devDependencies?.prettier === undefined
+  ) {
+    return undefined;
+  }
 
-    const config = pathJoin(cwd, 'prettier.config.js');
-    state.addRef(config);
-  },
-);
+  const config = pathJoin(cwd, 'prettier.config.js');
+  addFileReference(packageDef, config);
+});

@@ -4,6 +4,7 @@ import type { State } from '../analyze.js';
 import { globSync } from 'glob';
 import { existsSync } from 'node:fs';
 import {
+  addFileReference,
   type PackageDefinition,
   packageOrWorkspaceHasDependency,
 } from '../package.js';
@@ -56,12 +57,12 @@ export const plugin = createPlugin(async ({ state, packageDef }) => {
   const config = await loadConfig(packageDef, state);
   config?.setupFilesAfterEnv?.forEach((path) => {
     const absolute = path.replace('<rootDir>', cwd);
-    state.addRef(absolute);
+    addFileReference(packageDef, absolute);
   });
 
   const configPath = pathJoin(cwd, 'jest.config.js');
   if (existsSync(configPath)) {
-    state.addRef(configPath);
+    addFileReference(packageDef, configPath);
   }
   const allFiles =
     config?.testMatch?.reduce((acc, match) => {

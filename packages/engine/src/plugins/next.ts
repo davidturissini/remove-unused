@@ -3,6 +3,7 @@ import { join as pathJoin, extname } from 'node:path';
 import type { State } from '../analyze.js';
 import { z } from 'zod';
 import { createPlugin } from '../plugin.js';
+import { addFileReference, PackageDefinition } from '../package.js';
 
 const postCssConfigSchema = z.object({
   default: z
@@ -38,11 +39,15 @@ async function importNextJsConfig(absPath: string, state: State) {
   return nextJsConfigSchemaImported.parse(value).default;
 }
 
-async function loadConfig(cwd: string, state: State) {
+async function loadConfig(
+  packageDef: PackageDefinition,
+  cwd: string,
+  state: State,
+) {
   for (const fileName of CONFIG_FILE_NAMES) {
     const absPath = pathJoin(cwd, fileName);
     if (existsSync(absPath)) {
-      state.addRef(absPath);
+      addFileReference(packageDef, absPath);
       const contents = await importNextJsConfig(absPath, state);
       const parsed = nextJsConfigSchema.safeParse(contents);
       if (parsed.success === false) {
@@ -90,24 +95,28 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
 
   const absoluteDir = pathJoin(cwd, localNextDir);
   const config = await loadConfig(
+    packageDef,
     hasConfiguredLocalDir === true ? absoluteDir : cwd,
     state,
   );
   if (config) {
-    state.addRef(config.fileName);
+    addFileReference(packageDef, config.fileName);
   }
 
   const postCssConfigPath = pathJoin(absoluteDir, 'postcss.config.js');
 
   if (existsSync(postCssConfigPath) === true) {
-    state.addRef(postCssConfigPath);
+    addFileReference(packageDef, postCssConfigPath);
     const postCssConfig = await state.import(postCssConfigPath);
     const parsed = postCssConfigSchema.safeParse(postCssConfig);
     if (
       parsed.success === true &&
       parsed?.data?.default?.plugins?.tailwindcss?.config !== undefined
     ) {
-      state.addRef(parsed.data.default.plugins.tailwindcss.config);
+      addFileReference(
+        packageDef,
+        parsed.data.default.plugins.tailwindcss.config,
+      );
     }
   }
 

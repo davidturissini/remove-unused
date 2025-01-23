@@ -1,15 +1,17 @@
 import { existsSync } from 'node:fs';
 import { createPlugin } from '../plugin.js';
 import { join as pathJoin } from 'node:path';
-import {
-  addFileReference,
-  packageOrWorkspaceHasDependency,
-} from '../package.js';
+import { addFileReference, packageHasDependency } from '../package.js';
 
-const CONFIG_FILES = ['eslint.config.js', '.eslintrc.js', '.eslintrc.cjs'];
+const CONFIG_FILES = [
+  '.size-limit.json',
+  '.size-limit.js',
+  '.size-limit.cjs',
+  '.size-limit.ts',
+];
 
 export const plugin = createPlugin(({ packageDef }) => {
-  if (packageOrWorkspaceHasDependency(packageDef, 'eslint') === false) {
+  if (packageHasDependency(packageDef, 'size-limit') === false) {
     return;
   }
 
