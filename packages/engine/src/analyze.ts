@@ -431,7 +431,6 @@ async function walkFiles(packageDef: PackageDefinition, state: State) {
       if (/dynamic require/.test(`${e}`)) {
         return;
       }
-      console.log(`Error when analyzing "${path}"`);
       throw e;
       // noop
     }

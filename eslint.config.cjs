@@ -6,7 +6,12 @@ module.exports = [
   {
     ignores: ['**/dist/*', '**/.astro/*'],
   },
-  { files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'] },
+  {
+    files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
+    rules: {
+      'no-console': 'error',
+    },
+  },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
 ];
