@@ -71,9 +71,6 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
   const { scripts: packageJsonScripts } = packageJson;
 
   if (packageJsonScripts === undefined) {
-    console.warn(
-      `Next is listed as dependency but no scripts are defined! cwd: ${cwd}`,
-    );
     return;
   }
 
@@ -84,9 +81,6 @@ export const plugin = createPlugin(async ({ packageDef, state }) => {
   });
 
   if (nextJsScript === undefined) {
-    console.warn(
-      `Next is listeed as dependency but no Next scripts are defined! cwd: ${cwd}`,
-    );
     return;
   }
 
