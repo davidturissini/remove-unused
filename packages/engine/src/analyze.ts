@@ -15,6 +15,7 @@ import remarkMdx from 'remark-mdx';
 import resolve from 'resolve';
 
 import { importFile } from './importer.js';
+import { plugin as mochaPlugin } from './plugins/mocha.js';
 import { plugin as bntPlugin } from './plugins/bnt.js';
 import { plugin as eslintPlugin } from './plugins/eslint.js';
 import { plugin as jestPlugin } from './plugins/jest.js';
@@ -39,6 +40,7 @@ import {
 } from './package.js';
 
 const pluginsRegistry = [
+  mochaPlugin,
   vitestPlugin,
   jestPlugin,
   packageJsonScriptsPlugin,
@@ -85,6 +87,10 @@ function walk(
   },
 ) {
   switch (exp.type) {
+    case 'MemberExpression': {
+      walk(exp.object, visitor);
+      break;
+    }
     case 'ImportDeclaration': {
       visitor.importStatement(exp);
       break;
@@ -92,6 +98,10 @@ function walk(
     case 'ExportAllDeclaration':
     case 'ExportNamedDeclaration': {
       visitor.exportStatement(exp);
+      break;
+    }
+    case 'TryStatement': {
+      walk(exp.block, visitor);
       break;
     }
     case 'AssignmentExpression': {
@@ -113,9 +123,89 @@ function walk(
       walk(exp.expression, visitor);
       break;
     }
+    case 'ObjectExpression': {
+      exp.properties.forEach((prop) => {
+        switch (prop.type) {
+          case 'KeyValueProperty': {
+            walk(prop.value, visitor);
+            break;
+          }
+          case 'GetterProperty': {
+            if (prop.body) {
+              walk(prop.body, visitor);
+            }
+            break;
+          }
+        }
+      });
+      break;
+    }
+    case 'ReturnStatement': {
+      if (exp.argument) {
+        walk(exp.argument, visitor);
+      }
+      break;
+    }
+    case 'BlockStatement': {
+      exp.stmts.forEach((stmt) => {
+        walk(stmt, visitor);
+      });
+      break;
+    }
+    case 'IfStatement': {
+      walk(exp.consequent, visitor);
+      if (exp.alternate) {
+        walk(exp.alternate, visitor);
+      }
+      break;
+    }
+    case 'NewExpression': {
+      exp.arguments?.forEach((arg) => {
+        walk(arg.expression, visitor);
+      });
+      break;
+    }
+    case 'ClassDeclaration': {
+      exp.body.forEach((item) => {
+        switch (item.type) {
+          case 'Constructor': {
+            if (item.body !== undefined) {
+              walk(item.body, visitor);
+            }
+            break;
+          }
+          case 'ClassMethod': {
+            if (item.function.body !== undefined) {
+              walk(item.function.body, visitor);
+            }
+            break;
+          }
+        }
+      });
+
+      break;
+    }
+    case 'FunctionExpression':
+    case 'ArrowFunctionExpression':
+    case 'FunctionDeclaration': {
+      if (exp.body === undefined) {
+        return;
+      }
+      walk(exp.body, visitor);
+      break;
+    }
     case 'CallExpression': {
-      if (exp.callee.type === 'Identifier' && exp.callee.value === 'require') {
-        visitor.require(exp);
+      switch (exp.callee.type) {
+        case 'MemberExpression': {
+          walk(exp.callee.object, visitor);
+          break;
+        }
+        case 'Identifier': {
+          if (exp.callee.value === 'require') {
+            visitor.require(exp);
+          }
+          break;
+        }
       }
     }
   }
@@ -193,15 +283,16 @@ function resolveRequireStatements(
           throw new Error(`dynamic require() statement: "${sourceFilePath}"`);
         }
 
-        const argValue = firstArgument.expression.value;
-        const extension = extname(argValue) || '.js';
-
-        staticRequireStatements.push(
-          pathJoin(
-            dirname(sourceFilePath),
-            `${argValue.replace(extension, '')}${extension}`,
-          ),
+        const resolvedFilePath = resolveImportPath(
+          dirname(sourceFilePath),
+          firstArgument.expression.value,
         );
+
+        if (resolvedFilePath === undefined) {
+          return;
+        }
+
+        staticRequireStatements.push(resolvedFilePath);
       },
     });
   });
