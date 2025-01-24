@@ -2,12 +2,31 @@ import mock from 'mock-fs';
 import { describe, expect, it, vi } from 'vitest';
 import { parseFile, analyze } from './analyze.js';
 import { readFileSync } from 'fs';
+import type { PackageJsonSchema } from './package.js';
 
 async function mockImport(path: string) {
   const contents = readFileSync(path).toString();
   return Promise.resolve({
     default: eval(contents),
   });
+}
+
+function mockRequire(path: string) {
+  const contents = readFileSync(path).toString();
+  return eval(contents);
+}
+
+function mockPackageJson(data: Partial<PackageJsonSchema> = {}) {
+  return {
+    ...{
+      name: 'test-package',
+      main: 'src/main.ts',
+      version: '0.0.1',
+      private: true,
+      dependencies: {},
+    },
+    ...data,
+  };
 }
 
 describe('analyze', () => {
@@ -265,6 +284,38 @@ describe('analyze', () => {
           ]);
         });
       });
+
+      it('should not mark index.js files as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify({
+            name: 'unused-typescript-file',
+            main: 'src/main.ts',
+            version: '0.0.1',
+            private: true,
+            dependencies: {},
+            scripts: {
+              dev: 'next dev demo',
+            },
+          }),
+          '/test/src/main.ts': `
+            const { foo } = require('./folder');
+          `,
+          '/test/src/folder/index.ts': `// used`,
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          require: mockRequire,
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
+      });
     });
 
     describe('assignment expression', () => {
@@ -289,6 +340,280 @@ describe('analyze', () => {
         expect(packages).toEqual([
           {
             name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('Inside of a function body', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            module.exports = {
+              util: () => require('./utils')
+            }
+          `,
+          '/test/src/utils.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('Inside an IF statement', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            if (a !== b) {
+              require('./utils')
+            }
+          `,
+          '/test/src/utils.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('Inside an ELSE statement', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            if (a !== b) {
+              // do something
+            } else {
+              require('./utils')
+            }
+          `,
+          '/test/src/utils.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('Returned from a getter inside of an object expression', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            module.exports = {
+              get foo() {
+                return require('./utils');
+              }
+            }
+          `,
+          '/test/src/utils/index.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('With method chaining', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            require('./utils').doSomething();
+          `,
+          '/test/src/utils/index.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('Returned from a constructor', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            class Foo {
+              constructor() {
+                this.bar = new Thing(() => require('./utils'));
+              }
+            }
+          `,
+          '/test/src/utils/index.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('In class method', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            class Foo {
+              method() {
+                const foo = require('./utils');
+              }
+            }
+          `,
+          '/test/src/utils/index.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('chained property', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            require('./utils').Thing;
+          `,
+          '/test/src/utils/index.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('inside a try statement', async () => {
+      it('should not mark require as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              main: './src/main.js',
+            }),
+          ),
+          '/test/src/main.js': `
+            try {
+              require('./utils').Thing;
+            } catch {}
+          `,
+          '/test/src/utils/index.js': '//used!',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
             unusedFiles: [],
           },
         ]);
@@ -1854,6 +2179,34 @@ import Foo from '@/components/Foo'
         expect(packages).toEqual([
           {
             name: 'unused-typescript-file',
+            unusedFiles: [],
+          },
+        ]);
+      });
+    });
+
+    describe('mocha', () => {
+      it('should not mark files in test directory as unused', async () => {
+        mock({
+          '/test/package.json': JSON.stringify(
+            mockPackageJson({
+              dependencies: {
+                mocha: '0.0.0',
+              },
+              private: true,
+            }),
+          ),
+          '/test/src/test/used.test.ts': '// test file',
+        });
+
+        const { packages } = await analyze({
+          cwd: '/test',
+          import: mockImport,
+        });
+
+        expect(packages).toEqual([
+          {
+            name: 'test-package',
             unusedFiles: [],
           },
         ]);
