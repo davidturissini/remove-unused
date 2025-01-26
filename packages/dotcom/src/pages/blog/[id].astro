@@ -1,0 +1,31 @@
+---
+import { getCollection, render } from 'astro:content';
+import Shell from '../../layouts/shell.astro';
+import Header from '../../components/Header.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.filter((post) => {
+    if (import.meta.env.DEV === true) {
+      return true;
+    }
+    return post.data.draft;
+  }).map(post => {
+    return {
+      props: { post },
+      params: { id: post.id },
+    }
+  }
+  );
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+<Shell title={post.data.title}>
+  <Header />
+  <article class="p-5 max-w-none prose prose-slate">
+    <h1>{post.data.title}</h1>
+    <Content />
+  </article>
+</Shell>
