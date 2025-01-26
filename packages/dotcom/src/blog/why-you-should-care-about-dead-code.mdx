@@ -1,13 +1,20 @@
 ---
-title: Why You Should Care About Dead Code
-draft: false
+title: Why Dead Code Is Hurting Your Team — and How to Fix It
+image: ../images/DALL-E-2025-01-26.webp
+description: 'Dead code clutters your codebase, increases complexity, and slows down development. It wastes time and resources while making updates and refactoring harder. Start improving your codebase today by addressing this silent productivity killer!'
 ---
 
-Dead code is tech debt and it's slowing you and your team down. Like all forms of tecb debt, dead code makes it harder for you team to implement new features. It also makes it harder for your team to improve existing features or refactor code.
+Dead code is a silent form of technical debt, and it's slowing your team down. Dead code increases the complexity of your codebase which makes it harder to implement new features, improve existing functionality, or refactor code efficiently. Ignoring it can lead to slower development cycles, frustrated developers, and unnecessary costs.
 
-## A Simple Example
+<hr />
 
-The impact of dead code in your code base is not obvious, but it is very real. Take, for example, the following Typescript snippet:
+## What Is Dead Code?
+
+Dead code is any code in your codebase that isn’t actively used in your application. This could range anywhere from unused files all the way down to unused exports, dependencies, or even enum properties. While it might seem harmless at first, dead code contributes to clutter, confusion, and wasted effort. Removing it is crucial to maintaining a clean, efficient, and scalable codebase.
+
+## The Hidden Costs of Dead Code
+
+The impact of dead code is often subtle but highly consequential. To understand its effects, let’s look at a simple example in TypeScript:
 
 ```ts
 type Params = {
@@ -23,16 +30,32 @@ function realFunction(params: Params) {
 }
 ```
 
-Now, let's say that you wanted to change `value` from a `number` to a `boolean`. This would require you to update both `realFunction` and `unusedFunction`. The problem with this is that you would have to spend time, energy, and money updating code that isn't being used anywhere. If the contents of `unusedFunction` are non-trivial, at best it will require you to spend more time trying to understand what it does. At worst, you may have to pull in other developers in order to understand the original intent and purpose of that function. This extra work makes it longer to complete the original task. If deadlines are tight, it could also put the entire task at risk of being delayed.
+Now, imagine you need to change the value property from a `number` to a `boolean`. This small update forces you to modify both `realFunction` and `unusedFunction`—even though `unusedFunction` isn’t being used anywhere in your code.
 
-## Beyond the Simple
+If `unusedFunction` is complex, you’ll spend critical dev cycles deciphering its purpose, dependencies, and downstream implications. Worse, you might need input from other developers to understand its original intent. All this extra work delays your task, increases development costs, and risks missing tight deadlines.
 
-Dead code has broader implications beyond just an unused function in a single file. There are lots of tools out there that can easily tell you if you have an unused function in a single file. The problem becomes magnified when there are entire files or even folders of unused code. The problem then becomes much larger than a single function. It becomes dozens or maybe even hundreds of functions of dead code that your team still has to reason about. This should not be the case.
+## The Bigger Picture: Dead Code Across Your Codebase
 
-## Remove Unused
+Removing dead code requires a deliberate and systematic approach. Here are two main strategies to consider:
 
-There are two ways to deal with dead code removal. You could manually audit the code base and remove unused code. Depending on how large your code base is, this could be something that takes a few hours or something that takes weeks. It might not be worth dedicating a developer to find unused code because that could impact other things that your business needs. Manually finding dead code paths is also subject to errors and mistakes. It may be that you miss some dead code paths or it could be that some used code accidentally gets removed.
+### 1. Manual Auditing
 
-Another option is to automate the process of finding and removing dead code paths. We made [remove-unused](https://www.remove-unused.com) for this exact purpose. `remove-unused` will spider your Typescript code base and report back any files that are not used anywhere. It will inspect your code's import statements and take into account any paths or aliases you may have setup. `remove-unused` also understands popular frameworks like NextJs so it knows that all of the files in your `app` or `pages` directory are being used, even if there are no imports in the codebase itself. It even has support for `MDX` files!
+One way to remove dead code is by manually reviewing your codebase. This approach works for smaller projects but quickly becomes impractical for larger codebases. It’s time-consuming, error-prone, and may lead to accidentally removing active code or missing significant dead code paths.
 
-We made `remove-unused` because we recognized that removing dead code paths is a big problem but teams don't always get the time to go back and remove them. `remove-unused` automates dead code removal so that you can focus on your business problems instead.
+### 2. Automated Tools
+
+For larger projects, automating the detection and removal of dead code is a game-changer. Tools like [remove-unused](https://removeunused.com) simplify this process by analyzing your TypeScript codebase, identifying unused files, and providing actionable reports.
+
+`remove-unused` works by inspecting your Typescript codebase. It builds your project's dependency graph by looking at all of your code's import and require statements. It then flags files that aren't referenced anywhere. This accounts for aliases or custom paths, and ensures unused code is accurately flagged.
+
+`remove-unused` is also designed to work seamlessly with modern frameworks like Next.js. It automatically recognizes critical directories such as app or pages and even supports MDX files.
+
+Using tools like `remove-unused` to automatically remove dead code will save your team time, reduce errors, and allow your to focus on solving core business problems instead of wrestling with outdated code.
+
+## Why Dead Code Shouldn’t Be Ignored
+
+Dead code isn’t just an annoyance—it’s a productivity killer. It adds complexity to your codebase, increases maintenance costs, and slows down feature delivery. Addressing dead code proactively improves code quality, boosts team morale, and accelerates development.
+
+Start cleaning up your codebase today. Whether you use manual auditing for small projects or automated tools like remove-unused for larger ones, taking action now will set your team up for success.
+
+Ready to eliminate dead code? Learn more at [removeunused.com](https://removeunused.com).

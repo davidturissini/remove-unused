@@ -3,9 +3,10 @@ import { ClientRouter } from 'astro:transitions';
 
 type Props = {
   title: string;
+  description: string;
 }
 
-const { title } = Astro.props;
+const { title, description } = Astro.props;
 
 ---
 
@@ -13,6 +14,7 @@ const { title } = Astro.props;
   <head>
     <title>{title} - Remove Unused</title>
     <meta charset="utf-8" />
+    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <ClientRouter />
   </head>
