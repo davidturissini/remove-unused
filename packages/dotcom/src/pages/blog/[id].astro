@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Shell from '../../layouts/shell.astro';
 import Header from '../../components/Header.astro';
+import { Image } from 'astro:assets';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
@@ -21,11 +22,16 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content } = await render(post);
+
 ---
-<Shell title={post.data.title}>
+
+<Shell description={post.data.description} title={post.data.title}>
   <Header />
   <article class="p-5 max-w-none prose prose-slate">
-    <h1>{post.data.title}</h1>
+    <header>
+      <h1>{post.data.title}</h1>
+      <Image alt="" src={post.data.image} />
+    </header>
     <Content />
   </article>
 </Shell>
