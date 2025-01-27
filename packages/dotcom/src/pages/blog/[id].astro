@@ -10,7 +10,7 @@ export async function getStaticPaths() {
     if (import.meta.env.DEV === true) {
       return true;
     }
-    return post.data.draft;
+    return post.data.draft === false;
   }).map(post => {
     return {
       props: { post },
