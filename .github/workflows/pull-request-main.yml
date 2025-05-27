@@ -9,6 +9,8 @@ jobs:
     steps:
       - name: Sent prompt
         uses: daves-dead-simple/open-ai-action@main
+        env:
+          OPEN_API_KEY: FOO
         with:
           prompt: Hello World
   static:
