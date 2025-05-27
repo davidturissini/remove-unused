@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sent prompt
-        uses: daves-dead-simple/open-ai-action
+        uses: daves-dead-simple/open-ai-action@main
         with:
           prompt: Hello World
   static:
