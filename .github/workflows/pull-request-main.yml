@@ -4,6 +4,13 @@ on:
     branches:
       - main
 jobs:
+  chatgpt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sent prompt
+        uses: daves-dead-simple/open-ai-action
+        with:
+          prompt: Hello World
   static:
     runs-on: ubuntu-latest
     steps:
